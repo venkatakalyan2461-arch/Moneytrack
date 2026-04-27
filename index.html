@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PaisaTrack — UPI Expense Tracker</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PaisaTrack">
+<meta name="theme-color" content="#0F6E56">
+<meta name="description" content="Track UPI expenses automatically. Free, offline, private.">
+
+<!-- Icons -->
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #0F6E56;
+    --primary-light: #1D9E75;
+    --primary-surface: #E1F5EE;
+    --primary-accent: #5DCAA5;
+    --bg: #F4F6F5;
+    --card: #ffffff;
+    --text: #2C2C2A;
+    --text-muted: #888780;
+    --text-light: #B4B2A9;
+    --border: #E8E6E0;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --food: #E8574A;
+    --travel: #378ADD;
+    --shopping: #D4537E;
+    --bills: #7F77DD;
+    --health: #1D9E75;
+    --entertainment: #EF9F27;
+    --groceries: #639922;
+    --other: #888780;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ── App Shell ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 420px;
+    margin: 0 auto;
+    position: relative;
+    background: var(--bg);
+    box-shadow: 0 0 40px rgba(0,0,0,0.12);
+  }
+
+  .screen {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  .screen.active { display: flex; }
+
+  .scroll-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 80px;
+  }
+  .scroll-body::-webkit-scrollbar { display: none; }
+
+  /* ── Header ── */
+  .header {
+    background: var(--primary);
+    padding: 48px 20px 20px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .header-greeting { color: var(--primary-accent); font-size: 12px; }
+  .header-title { font-size: 22px; font-weight: 800; color: white; }
+  .avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; color: white;
+  }
+  .header-label { color: var(--primary-accent); font-size: 11px; margin-bottom: 4px; }
+  .header-amount { font-size: 36px; font-weight: 800; color: white; line-height: 1; }
+  .header-sub { color: var(--primary-accent); font-size: 11px; margin-top: 4px; }
+
+  /* simple appbar for inner screens */
+  .appbar {
+    background: var(--primary);
+    padding: 48px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .appbar-back {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 18px;
+  }
+  .appbar-title { font-size: 18px; font-weight: 800; color: white; }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    display: flex;
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 8px 4px 12px;
+    flex-shrink: 0;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 3px; cursor: pointer; padding: 6px 4px;
+    border-radius: 10px; transition: background 0.2s;
+    border: none; background: none;
+  }
+  .nav-item.active { background: var(--primary-surface); }
+  .nav-icon { font-size: 20px; }
+  .nav-label {
+    font-size: 10px; font-weight: 700;
+    color: var(--text-muted);
+    font-family: 'Nunito', sans-serif;
+  }
+  .nav-item.active .nav-label { color: var(--primary); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    margin: 0 16px 12px;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 700;
+    color: var(--text); margin-bottom: 12px;
+  }
+
+  /* ── Stat Row ── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 16px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: 800; color: var(--text); }
+
+  /* ── Category Bar ── */
+  .cat-row { margin-bottom: 12px; }
+  .cat-row:last-child { margin-bottom: 0; }
+  .cat-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .cat-left { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .cat-amount { font-size: 13px; font-weight: 700; color: var(--text); }
+  .progress-track {
+    height: 6px; background: var(--bg);
+    border-radius: 4px; overflow: hidden;
+  }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+
+  /* ── Transaction Tile ── */
+  .txn-tile {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    background: white; border-radius: 12px;
+    margin: 0 16px 6px;
+    cursor: pointer; transition: transform 0.1s;
+    position: relative; overflow: hidden;
+  }
+  .txn-tile:active { transform: scale(0.98); }
+  .txn-icon {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .txn-info { flex: 1; min-width: 0; }
+  .txn-merchant { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .txn-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .txn-right { text-align: right; flex-shrink: 0; }
+  .txn-amount { font-size: 15px; font-weight: 800; color: var(--red); }
+  .upi-badge {
+    display: inline-block;
+    background: var(--primary-surface);
+    color: var(--primary);
+    font-size: 9px; font-weight: 800;
+    padding: 2px 5px; border-radius: 4px;
+    margin-top: 3px;
+  }
+
+  /* swipe to delete */
+  .txn-delete-bg {
+    position: absolute; right: 0; top: 0; bottom: 0;
+    width: 80px; background: var(--red-light);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--red); font-size: 20px;
+    transform: translateX(100%);
+    transition: transform 0.2s;
+  }
+
+  /* ── Section Header ── */
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 16px 8px;
+  }
+  .section-title { font-size: 15px; font-weight: 800; }
+  .section-link { font-size: 12px; color: var(--primary); font-weight: 700; cursor: pointer; border: none; background: none; font-family: 'Nunito', sans-serif; }
+
+  /* ── FAB ── */
+  .fab {
+    position: fixed;
+    bottom: 80px; right: calc(50% - 210px + 16px);
+    background: var(--primary);
+    color: white; border: none; cursor: pointer;
+    border-radius: 28px;
+    padding: 14px 22px;
+    font-size: 14px; font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(15,110,86,0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+    z-index: 100;
+  }
+  .fab:active { transform: scale(0.96); box-shadow: 0 2px 10px rgba(15,110,86,0.3); }
+  .fab-icon { font-size: 20px; }
+
+  /* ── Add Expense Form ── */
+  .form-section {
+    background: white; border-radius: 16px;
+    margin: 12px 16px; padding: 18px;
+  }
+  .form-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
+  .amount-row { display: flex; align-items: center; gap: 8px; }
+  .rupee-sign { font-size: 36px; font-weight: 800; color: var(--primary); }
+  .amount-input {
+    font-size: 36px; font-weight: 800;
+    border: none; outline: none; background: transparent;
+    color: var(--text); width: 100%;
+    font-family: 'Nunito', sans-serif;
+  }
+  .amount-input::placeholder { color: var(--border); }
+  .text-input {
+    width: 100%; padding: 12px 14px;
+    background: var(--bg); border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600;
+    font-family: 'Nunito', sans-serif; color: var(--text);
+    outline: none; transition: box-shadow 0.2s;
+  }
+  .text-input:focus { box-shadow: 0 0 0 2px var(--primary); }
+
+  /* category chips */
+  .cat-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cat-chip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 7px 12px; border-radius: 10px;
+    background: var(--bg); border: 1.5px solid transparent;
+    cursor: pointer; font-size: 12px; font-weight: 700;
+    font-family: 'Nunito', sans-serif; color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .cat-chip.selected { background: rgba(0,0,0,0.05); }
+
+  /* save btn */
+  .save-btn {
+    width: 100%; padding: 15px;
+    background: var(--primary); color: white;
+    border: none; border-radius: 13px;
+    font-size: 15px; font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer; margin: 16px 0 0;
+    transition: transform 0.1s;
+  }
+  .save-btn:active { transform: scale(0.98); }
+
+  /* ── History ── */
+  .search-box {
+    margin: 12px 16px;
+    position: relative;
+  }
+  .search-input {
+    width: 100%; padding: 12px 14px 12px 40px;
+    background: white; border: none; border-radius: 12px;
+    font-size: 13px; font-family: 'Nunito', sans-serif;
+    outline: none; color: var(--text);
+  }
+  .search-icon {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px; color: var(--text-muted);
+  }
+  .day-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px 6px;
+  }
+  .day-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .day-total { font-size: 12px; font-weight: 800; color: var(--red); }
+
+  /* ── Charts ── */
+  .chart-header {
+    background: var(--primary);
+    padding: 16px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .chart-month { color: var(--primary-accent); font-size: 12px; }
+  .chart-total { color: white; font-size: 28px; font-weight: 800; }
+  .chart-count { color: white; font-size: 22px; font-weight: 800; text-align: right; }
+  .chart-count-label { color: var(--primary-accent); font-size: 12px; }
+  .canvas-wrap { padding: 16px; height: 220px; }
+
+  /* legend */
+  .legend-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0;
+  }
+  .legend-left { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .legend-name { font-size: 13px; font-weight: 600; }
+  .legend-right { display: flex; gap: 16px; }
+  .legend-pct { font-size: 12px; color: var(--text-muted); }
+  .legend-amt { font-size: 13px; font-weight: 800; }
+
+  /* ── Settings ── */
+  .settings-section-title {
+    font-size: 12px; font-weight: 700; color: var(--text-muted);
+    padding: 16px 16px 6px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .settings-card { background: white; border-radius: 16px; margin: 0 16px 12px; overflow: hidden; }
+  .settings-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; background: var(--bg); flex-shrink: 0;
+  }
+  .settings-info { flex: 1; }
+  .settings-label { font-size: 14px; font-weight: 700; }
+  .settings-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .settings-arrow { color: var(--text-light); font-size: 16px; }
+
+  /* toggle */
+  .toggle {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--border); position: relative;
+    cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+    border: none;
+  }
+  .toggle.on { background: var(--primary); }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: white; top: 2px; left: 2px;
+    transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle.on::after { left: 22px; }
+
+  /* privacy banner */
+  .privacy-banner {
+    margin: 0 16px 20px;
+    background: var(--primary-surface);
+    border-radius: 14px; padding: 14px 16px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .privacy-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .privacy-text { font-size: 12px; color: var(--primary); font-weight: 600; line-height: 1.5; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 100px;
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #2C2C2A; color: white;
+    padding: 10px 20px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    opacity: 0; transition: all 0.3s;
+    z-index: 999; white-space: nowrap;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Empty State ── */
+  .empty {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; font-weight: 600; }
+  .empty-sub { font-size: 12px; margin-top: 4px; }
+
+  /* date input */
+  .date-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--bg); border-radius: 10px;
+  }
+  .date-label-left { font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+  input[type="date"] {
+    border: none; background: transparent; outline: none;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px; font-weight: 700; color: var(--primary);
+    cursor: pointer;
+  }
+
+  @media (min-width: 421px) {
+    .fab { right: calc(50% - 210px + 16px); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══════════════ HOME SCREEN ═══════════════ -->
+  <div class="screen active" id="screen-home">
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <div class="header-greeting" id="greeting">Good morning ☀️</div>
+          <div class="header-title">PaisaTrack</div>
+        </div>
+        <div class="avatar">P</div>
+      </div>
+      <div class="header-label">Spent this month</div>
+      <div class="header-amount" id="home-total">₹0</div>
+      <div class="header-sub" id="home-month"></div>
+    </div>
+
+    <div class="scroll-body">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Today</div>
+          <div class="stat-value" id="home-today">₹0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Transactions</div>
+          <div class="stat-value" id="home-count">0</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <span class="section-title">Where money goes</span>
+      </div>
+      <div class="card" id="home-categories">
+        <div class="empty"><div class="empty-sub">No expenses yet</div></div>
+      </div>
+
+      <div class="section-header">
+        <span class="section-title">Recent</span>
+        <button class="section-link" onclick="switchTab('history')">See all</button>
+      </div>
+      <div id="home-recent"></div>
+    </div>
+
+    <button class="fab" onclick="openAddExpense()">
+      <span class="fab-icon">＋</span> Add Expense
+    </button>
+  </div>
+
+  <!-- ═══════════════ ADD EXPENSE SCREEN ═══════════════ -->
+  <div class="screen" id="screen-add">
+    <div class="appbar">
+      <button class="appbar-back" onclick="closeAddExpense()">✕</button>
+      <span class="appbar-title" id="add-title">Add Expense</span>
+    </div>
+
+    <div class="scroll-body" style="padding-bottom:20px;">
+      <div class="form-section">
+        <div class="form-label">AMOUNT</div>
+        <div class="amount-row">
+          <span class="rupee-sign">₹</span>
+          <input class="amount-input" type="number" id="inp-amount" placeholder="0" min="0" step="1">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-label">MERCHANT / PAID TO</div>
+        <input class="text-input" type="text" id="inp-merchant" placeholder="e.g. Zomato, Rapido, Amazon" oninput="autoCategory()">
+      </div>
+
+      <div class="form-section">
+        <div class="form-label" style="margin-bottom:12px;">CATEGORY</div>
+        <div class="cat-chips" id="cat-chips"></div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-label">DATE</div>
+        <div class="date-row">
+          <span class="date-label-left">📅 Date</span>
+          <input type="date" id="inp-date">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-label">NOTE (OPTIONAL)</div>
+        <input class="text-input" type="text" id="inp-note" placeholder="Add a note...">
+      </div>
+
+      <div style="margin: 0 16px;">
+        <button class="save-btn" onclick="saveExpense()">Save Expense</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ HISTORY SCREEN ═══════════════ -->
+  <div class="screen" id="screen-history">
+    <div class="appbar" style="padding-bottom:12px;">
+      <span class="appbar-title">All Transactions</span>
+    </div>
+
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" placeholder="Search transactions..." oninput="renderHistory(this.value)">
+    </div>
+
+    <div class="scroll-body" id="history-list" style="padding-top:4px;"></div>
+  </div>
+
+  <!-- ═══════════════ CHARTS SCREEN ═══════════════ -->
+  <div class="screen" id="screen-charts">
+    <div class="appbar" style="padding-bottom:12px;">
+      <span class="appbar-title">Analytics</span>
+    </div>
+
+    <div class="scroll-body">
+      <div class="chart-header" style="border-radius:0; background:var(--primary); margin:0 16px 12px; border-radius:16px; padding:16px;">
+        <div>
+          <div class="chart-month" id="chart-month-label"></div>
+          <div class="chart-total" id="chart-total">₹0</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="chart-count-label">Transactions</div>
+          <div class="chart-count" id="chart-count">0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Last 7 days</div>
+        <div style="height:180px;">
+          <canvas id="bar-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="card" id="pie-section">
+        <div class="card-title">By category</div>
+        <div style="height:200px; display:flex; justify-content:center;">
+          <canvas id="pie-chart"></canvas>
+        </div>
+        <div id="chart-legend" style="margin-top:16px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SETTINGS SCREEN ═══════════════ -->
+  <div class="screen" id="screen-settings">
+    <div class="appbar" style="padding-bottom:12px;">
+      <span class="appbar-title">Settings</span>
+    </div>
+
+    <div class="scroll-body">
+      <div class="settings-section-title">Tracking</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-icon">🔔</div>
+          <div class="settings-info">
+            <div class="settings-label">UPI Auto-tracking</div>
+            <div class="settings-sub" id="notif-status">Available after Android app install</div>
+          </div>
+          <button class="toggle" id="notif-toggle" onclick="toggleNotif()"></button>
+        </div>
+      </div>
+
+      <div class="settings-section-title">Data</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="exportCSV()">
+          <div class="settings-icon">📊</div>
+          <div class="settings-info">
+            <div class="settings-label">Export to CSV</div>
+            <div class="settings-sub">Download all transactions</div>
+          </div>
+          <span class="settings-arrow">›</span>
+        </div>
+        <div class="settings-row" onclick="clearAllData()">
+          <div class="settings-icon">🗑️</div>
+          <div class="settings-info">
+            <div class="settings-label">Clear All Data</div>
+            <div class="settings-sub">Delete all transactions</div>
+          </div>
+          <span class="settings-arrow">›</span>
+        </div>
+      </div>
+
+      <div class="settings-section-title">About</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-icon">⭐</div>
+          <div class="settings-info">
+            <div class="settings-label">Rate PaisaTrack</div>
+            <div class="settings-sub">Help us grow on Play Store</div>
+          </div>
+          <span class="settings-arrow">›</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">ℹ️</div>
+          <div class="settings-info">
+            <div class="settings-label">App Version</div>
+            <div class="settings-sub">1.0.0 (Web Preview)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="privacy-banner">
+        <span class="privacy-icon">🔒</span>
+        <div class="privacy-text">100% private. All your expense data is stored only on your device. We never upload or share your financial data.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ BOTTOM NAV ═══════════════ -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="switchTab('home')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" id="nav-history" onclick="switchTab('history')">
+      <span class="nav-icon">🧾</span>
+      <span class="nav-label">History</span>
+    </button>
+    <button class="nav-item" id="nav-charts" onclick="switchTab('charts')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Charts</span>
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  DATA LAYER — localStorage
+// ══════════════════════════════════════════
+const STORAGE_KEY = 'paisatrack_txns';
+
+const CATEGORIES = [
+  { name: 'Food & Dining',     icon: '🍔', color: '#E8574A', keywords: ['zomato','swiggy','dominos','pizza','burger','restaurant','cafe','food','biryani','hotel','kfc','mcdonalds'] },
+  { name: 'Travel',            icon: '🚗', color: '#378ADD', keywords: ['ola','uber','rapido','auto','bus','metro','irctc','redbus','taxi','cab','train'] },
+  { name: 'Shopping',          icon: '🛍️', color: '#D4537E', keywords: ['amazon','flipkart','myntra','meesho','ajio','nykaa','shopping','store','mart','reliance'] },
+  { name: 'Bills & Recharge',  icon: '⚡', color: '#7F77DD', keywords: ['airtel','jio','bsnl','vi','vodafone','electricity','bill','recharge','broadband','wifi','tata'] },
+  { name: 'Health',            icon: '💊', color: '#1D9E75', keywords: ['apollo','medplus','pharmeasy','hospital','clinic','doctor','medicine','pharmacy','1mg','netmeds'] },
+  { name: 'Entertainment',     icon: '🎬', color: '#EF9F27', keywords: ['netflix','hotstar','prime','spotify','youtube','movie','cinema','pvr','inox','bookmyshow'] },
+  { name: 'Groceries',         icon: '🛒', color: '#639922', keywords: ['blinkit','zepto','bigbasket','grofers','dmart','grocery','vegetables','supermarket','more'] },
+  { name: 'Other',             icon: '💰', color: '#888780', keywords: [] },
+];
+
+function getCategoryForMerchant(merchant) {
+  const lower = merchant.toLowerCase();
+  for (const cat of CATEGORIES) {
+    if (cat.keywords.some(kw => lower.includes(kw))) return cat.name;
+  }
+  return 'Other';
+}
+
+function getCatMeta(name) {
+  return CATEGORIES.find(c => c.name === name) || CATEGORIES[CATEGORIES.length - 1];
+}
+
+function loadTxns() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveTxns(txns) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(txns));
+}
+
+function addTxn(txn) {
+  const txns = loadTxns();
+  txn.id = Date.now();
+  txns.unshift(txn);
+  saveTxns(txns);
+}
+
+function deleteTxn(id) {
+  saveTxns(loadTxns().filter(t => t.id !== id));
+}
+
+// seed sample data on first load
+function seedIfEmpty() {
+  if (loadTxns().length > 0) return;
+  const now = new Date();
+  const d = (days, hours = 0) => new Date(now - days * 86400000 - hours * 3600000).toISOString();
+  const samples = [
+    { merchant: 'Zomato',         amount: 340,  category: 'Food & Dining',    date: d(0, 2) },
+    { merchant: 'Rapido',         amount: 120,  category: 'Travel',           date: d(0, 5) },
+    { merchant: 'Amazon',         amount: 899,  category: 'Shopping',         date: d(1, 1) },
+    { merchant: 'Swiggy',         amount: 285,  category: 'Food & Dining',    date: d(1, 4) },
+    { merchant: 'Jio Recharge',   amount: 299,  category: 'Bills & Recharge', date: d(2, 0) },
+    { merchant: 'Uber',           amount: 210,  category: 'Travel',           date: d(2, 3) },
+    { merchant: 'Blinkit',        amount: 645,  category: 'Groceries',        date: d(3, 1) },
+    { merchant: 'Netflix',        amount: 649,  category: 'Entertainment',    date: d(4, 2) },
+    { merchant: 'Apollo Pharmacy',amount: 380,  category: 'Health',           date: d(5, 0) },
+    { merchant: 'Dominos',        amount: 520,  category: 'Food & Dining',    date: d(6, 1) },
+    { merchant: 'Myntra',         amount: 1199, category: 'Shopping',         date: d(7, 2) },
+    { merchant: 'BookMyShow',     amount: 450,  category: 'Entertainment',    date: d(8, 3) },
+  ];
+  samples.forEach((s, i) => { s.id = Date.now() + i; s.source = 'sample'; });
+  saveTxns(samples);
+}
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+function fmt(amount) {
+  return '₹' + Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const txnDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (today - txnDay) / 86400000;
+  if (diff === 0) return 'Today ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 1) return 'Yesterday';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function groupKey(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const txnDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (today - txnDay) / 86400000;
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+let currentTab = 'home';
+let barChartInstance = null;
+let pieChartInstance = null;
+
+function switchTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('active');
+  document.getElementById('nav-' + tab).classList.add('active');
+  currentTab = tab;
+
+  if (tab === 'home') renderHome();
+  if (tab === 'history') renderHistory('');
+  if (tab === 'charts') renderCharts();
+}
+
+// ══════════════════════════════════════════
+//  HOME
+// ══════════════════════════════════════════
+function renderHome() {
+  const txns = loadTxns();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // greeting
+  const h = now.getHours();
+  const g = h < 12 ? 'Good morning ☀️' : h < 17 ? 'Good afternoon 👋' : 'Good evening 🌙';
+  document.getElementById('greeting').textContent = g;
+
+  // month label
+  document.getElementById('home-month').textContent =
+    now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) + ' • ' + txns.length + ' transactions';
+
+  // month totals
+  const monthTxns = txns.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthTotal = monthTxns.reduce((s, t) => s + t.amount, 0);
+  document.getElementById('home-total').textContent = fmt(monthTotal);
+
+  // today
+  const todayTxns = txns.filter(t => new Date(t.date) >= today);
+  document.getElementById('home-today').textContent = fmt(todayTxns.reduce((s, t) => s + t.amount, 0));
+  document.getElementById('home-count').textContent = monthTxns.length;
+
+  // categories
+  const catTotals = {};
+  monthTxns.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const catEl = document.getElementById('home-categories');
+  if (sorted.length === 0) {
+    catEl.innerHTML = '<div class="empty"><div class="empty-sub">No expenses yet this month</div></div>';
+  } else {
+    catEl.innerHTML = sorted.map(([cat, amt]) => {
+      const meta = getCatMeta(cat);
+      const pct = Math.round((amt / monthTotal) * 100);
+      return `<div class="cat-row">
+        <div class="cat-info">
+          <div class="cat-left">${meta.icon} <span>${cat}</span></div>
+          <div class="cat-amount">${fmt(amt)}</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${pct}%;background:${meta.color}"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // recent
+  const recent = txns.slice(0, 5);
+  document.getElementById('home-recent').innerHTML = recent.length === 0
+    ? `<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">No transactions yet</div><div class="empty-sub">Tap + Add Expense to start</div></div>`
+    : recent.map(t => txnTileHTML(t)).join('');
+}
+
+function txnTileHTML(t) {
+  const meta = getCatMeta(t.category);
+  return `<div class="txn-tile" id="txn-${t.id}">
+    <div class="txn-icon" style="background:${meta.color}22">${meta.icon}</div>
+    <div class="txn-info">
+      <div class="txn-merchant">${t.merchant}</div>
+      <div class="txn-meta">${t.category} • ${fmtDate(t.date)}</div>
+    </div>
+    <div class="txn-right">
+      <div class="txn-amount">−${fmt(t.amount)}</div>
+      ${t.source === 'sample' ? '<div class="upi-badge">SAMPLE</div>' : '<div class="upi-badge">UPI</div>'}
+    </div>
+    <div class="txn-delete-bg" onclick="deleteTxnUI(${t.id})">🗑️</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+//  ADD EXPENSE
+// ══════════════════════════════════════════
+let editingId = null;
+let selectedCategory = 'Food & Dining';
+
+function openAddExpense() {
+  editingId = null;
+  selectedCategory = 'Food & Dining';
+  document.getElementById('inp-amount').value = '';
+  document.getElementById('inp-merchant').value = '';
+  document.getElementById('inp-note').value = '';
+  document.getElementById('inp-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('add-title').textContent = 'Add Expense';
+  renderCatChips();
+  document.querySelector('.screen.active').classList.remove('active');
+  document.getElementById('screen-add').classList.add('active');
+  setTimeout(() => document.getElementById('inp-amount').focus(), 300);
+}
+
+function closeAddExpense() {
+  document.getElementById('screen-add').classList.remove('active');
+  document.getElementById('screen-' + currentTab).classList.add('active');
+}
+
+function renderCatChips() {
+  document.getElementById('cat-chips').innerHTML = CATEGORIES.map(cat => {
+    const sel = cat.name === selectedCategory;
+    return `<button class="cat-chip ${sel ? 'selected' : ''}"
+      style="${sel ? `border-color:${cat.color};background:${cat.color}22;color:${cat.color}` : ''}"
+      onclick="selectCat('${cat.name}')">
+      ${cat.icon} ${cat.name}
+    </button>`;
+  }).join('');
+}
+
+function selectCat(name) {
+  selectedCategory = name;
+  renderCatChips();
+}
+
+function autoCategory() {
+  const merchant = document.getElementById('inp-merchant').value;
+  const cat = getCategoryForMerchant(merchant);
+  if (cat !== 'Other') {
+    selectedCategory = cat;
+    renderCatChips();
+  }
+}
+
+function saveExpense() {
+  const amount = parseFloat(document.getElementById('inp-amount').value);
+  const merchant = document.getElementById('inp-merchant').value.trim();
+  const note = document.getElementById('inp-note').value.trim();
+  const date = document.getElementById('inp-date').value;
+
+  if (!amount || amount <= 0) { showToast('Please enter a valid amount'); return; }
+  if (!merchant) { showToast('Please enter merchant name'); return; }
+  if (!date) { showToast('Please select a date'); return; }
+
+  const txn = {
+    merchant,
+    amount,
+    category: selectedCategory,
+    note,
+    date: new Date(date).toISOString(),
+    source: 'manual',
+  };
+
+  addTxn(txn);
+  showToast('Expense saved! 💚');
+  closeAddExpense();
+  renderHome();
+}
+
+// ══════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════
+function renderHistory(search = '') {
+  const txns = loadTxns();
+  const filtered = txns.filter(t =>
+    t.merchant.toLowerCase().includes(search.toLowerCase()) ||
+    t.category.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const el = document.getElementById('history-list');
+  if (filtered.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No transactions found</div></div>`;
+    return;
+  }
+
+  // group by day
+  const groups = {};
+  filtered.forEach(t => {
+    const key = groupKey(t.date);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  el.innerHTML = Object.entries(groups).map(([key, txns]) => {
+    const dayTotal = txns.reduce((s, t) => s + t.amount, 0);
+    return `
+      <div class="day-header">
+        <span class="day-label">${key}</span>
+        <span class="day-total">−${fmt(dayTotal)}</span>
+      </div>
+      ${txns.map(t => txnTileHTML(t)).join('')}
+    `;
+  }).join('');
+}
+
+function deleteTxnUI(id) {
+  if (!confirm('Delete this transaction?')) return;
+  deleteTxn(id);
+  showToast('Transaction deleted');
+  if (currentTab === 'home') renderHome();
+  else renderHistory('');
+}
+
+// ══════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════
+function renderCharts() {
+  const txns = loadTxns();
+  const now = new Date();
+
+  // month totals
+  const monthTxns = txns.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const total = monthTxns.reduce((s, t) => s + t.amount, 0);
+
+  document.getElementById('chart-month-label').textContent =
+    now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  document.getElementById('chart-total').textContent = fmt(total);
+  document.getElementById('chart-count').textContent = monthTxns.length;
+
+  // last 7 days bar chart
+  const labels = [], data = [];
+  for (let i = 6; i >= 0; i--) {
+    const day = new Date(now);
+    day.setDate(now.getDate() - i);
+    labels.push(day.toLocaleDateString('en-IN', { weekday: 'short' }));
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    const dayEnd = new Date(dayStart.getTime() + 86400000);
+    const dayTotal = txns.filter(t => {
+      const d = new Date(t.date);
+      return d >= dayStart && d < dayEnd;
+    }).reduce((s, t) => s + t.amount, 0);
+    data.push(dayTotal);
+  }
+
+  if (barChartInstance) barChartInstance.destroy();
+  barChartInstance = new Chart(document.getElementById('bar-chart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: data.map(v => v > 0 ? '#0F6E56' : '#F1EFE8'),
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => fmt(ctx.raw) }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Nunito', weight: '700', size: 11 }, color: '#888780' } },
+        y: { display: false, grid: { display: false } }
+      }
+    }
+  });
+
+  // pie chart
+  const catTotals = {};
+  monthTxns.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+  const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+  if (sortedCats.length === 0) {
+    document.getElementById('pie-section').innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data this month</div></div>`;
+    return;
+  }
+
+  if (pieChartInstance) pieChartInstance.destroy();
+  pieChartInstance = new Chart(document.getElementById('pie-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: sortedCats.map(([k]) => k),
+      datasets: [{
+        data: sortedCats.map(([, v]) => v),
+        backgroundColor: sortedCats.map(([k]) => getCatMeta(k).color),
+        borderWidth: 2, borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '55%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)} (${Math.round(ctx.raw / total * 100)}%)` } }
+      }
+    }
+  });
+
+  // legend
+  document.getElementById('chart-legend').innerHTML = sortedCats.map(([cat, amt]) => {
+    const meta = getCatMeta(cat);
+    const pct = Math.round(amt / total * 100);
+    return `<div class="legend-row">
+      <div class="legend-left">
+        <div class="legend-dot" style="background:${meta.color}"></div>
+        <span style="font-size:15px;">${meta.icon}</span>
+        <span class="legend-name">${cat}</span>
+      </div>
+      <div class="legend-right">
+        <span class="legend-pct">${pct}%</span>
+        <span class="legend-amt">${fmt(amt)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════
+function toggleNotif() {
+  showToast('Auto UPI tracking works after Android app install');
+}
+
+function exportCSV() {
+  const txns = loadTxns();
+  if (txns.length === 0) { showToast('No transactions to export'); return; }
+  const header = 'Date,Merchant,Category,Amount,Note';
+  const rows = txns.map(t =>
+    `${new Date(t.date).toLocaleDateString('en-IN')},${t.merchant},${t.category},${t.amount},${t.note || ''}`
+  );
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'paisatrack_expenses.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSV downloaded! 📊');
+}
+
+function clearAllData() {
+  if (!confirm('Delete ALL transactions? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  showToast('All data cleared');
+  renderHome();
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+seedIfEmpty();
+renderHome();
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('PaisaTrack SW registered'))
+      .catch(err => console.log('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
