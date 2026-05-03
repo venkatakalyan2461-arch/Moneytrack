@@ -1,8 +1,17 @@
-const CACHE_NAME = 'paisatrack-v1';
+const CACHE_NAME = 'spendsmart-v2';
+
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  '/Moneytrack/',
+  '/Moneytrack/index.html',
+  '/Moneytrack/manifest.json',
+  '/Moneytrack/icon-72.png',
+  '/Moneytrack/icon-96.png',
+  '/Moneytrack/icon-128.png',
+  '/Moneytrack/icon-144.png',
+  '/Moneytrack/icon-152.png',
+  '/Moneytrack/icon-192.png',
+  '/Moneytrack/icon-384.png',
+  '/Moneytrack/icon-512.png',
 ];
 
 // Install — cache all assets
@@ -23,11 +32,20 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch — serve from cache, fallback to network
+// Fetch — cache first, fallback to network, fallback to cached index
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cached => {
-      return cached || fetch(event.request).catch(() => caches.match('/index.html'));
+      if (cached) return cached;
+      return fetch(event.request)
+        .then(response => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match('/Moneytrack/index.html'));
     })
   );
 });

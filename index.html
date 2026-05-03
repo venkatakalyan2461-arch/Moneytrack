@@ -1866,7 +1866,7 @@ if (anyNotifEnabled() && typeof Notification !== 'undefined' && Notification.per
 }
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/Moneytrack/sw.js')
+    navigator.serviceWorker.register('/Moneytrack/sw.js', {scope: '/Moneytrack/'})
       .then(() => console.log('SW registered'))
       .catch(e => console.log('SW:', e));
   });
