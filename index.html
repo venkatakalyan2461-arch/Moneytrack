@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PaisaTrack — UPI Expense Tracker</title>
+<title>SpendSmart - Track Expense & Budget</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="PaisaTrack">
+<meta name="apple-mobile-web-app-title" content="SpendSmart">
 <meta name="theme-color" content="#0F6E56">
-<meta name="description" content="Track UPI expenses automatically. Free, offline, private.">
+<meta name="description" content="Smart expense tracking with budget alerts. Free, offline & private.">
 
 <!-- Icons -->
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -440,20 +440,200 @@
   @media (min-width: 421px) {
     .fab { right: calc(50% - 210px + 16px); }
   }
+
+  /* ── Dark Mode ── */
+  body.dark {
+    --bg: #1A1A1A;
+    --card: #242424;
+    --text: #F0EFEA;
+    --text-muted: #9A9890;
+    --text-light: #5A5855;
+    --border: #333330;
+    --red-light: #3A1A1A;
+    --primary-surface: #1A2E27;
+  }
+  body.dark .header { background: #0A4A3A; }
+  body.dark .appbar { background: #0A4A3A; }
+  body.dark .bottom-nav { background: #1E1E1E; border-top-color: #333; }
+  body.dark .budget-banner.safe { background: #1A2E27; }
+  body.dark .budget-banner.warning { background: #2E2A1A; color: #D4A017; }
+  body.dark .compare-card { background: var(--card); }
+  body.dark input { color: var(--text); }
+  body.dark .text-input { background: #2E2E2E; color: var(--text); }
+  body.dark .amount-input { color: var(--text); }
+  body.dark .search-input { background: #2E2E2E; color: var(--text); }
+  body.dark .cat-chip { background: #2E2E2E; color: var(--text-muted); }
+  body.dark .date-row { background: #2E2E2E; }
+  body.dark input[type="date"] { color-scheme: dark; }
+
+  /* ── Period Buttons ── */
+  .period-btn {
+    flex: 1; padding: 8px 4px;
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 11px; font-weight: 700;
+    font-family: 'Nunito', sans-serif; color: var(--text-muted);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .period-btn.active {
+    background: var(--primary); color: white;
+    border-color: var(--primary);
+  }
+  /* ── Action Sheet ── */
+  .action-overlay {
+    position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: flex-end;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .action-overlay.show { opacity: 1; pointer-events: all; }
+  .action-sheet {
+    background: white; width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 12px 0 32px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  .action-overlay.show .action-sheet { transform: translateY(0); }
+  .action-handle {
+    width: 36px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 0 auto 16px;
+  }
+  .action-txn-info {
+    padding: 0 20px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .action-merchant { font-size: 16px; font-weight: 800; color: var(--text); }
+  .action-amount { font-size: 14px; color: var(--red); font-weight: 700; margin-top: 2px; }
+  .action-btn {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; cursor: pointer;
+    border: none; background: none; width: 100%;
+    font-family: 'Nunito', sans-serif; text-align: left;
+    transition: background 0.1s;
+  }
+  .action-btn:active { background: var(--bg); }
+  .action-btn-icon { font-size: 20px; width: 28px; text-align: center; }
+  .action-btn-label { font-size: 15px; font-weight: 600; color: var(--text); }
+  .action-btn.danger .action-btn-label { color: var(--red); }
+  .action-cancel {
+    margin: 8px 16px 0;
+    padding: 14px;
+    background: var(--bg); border: none; border-radius: 12px;
+    width: calc(100% - 32px); font-size: 15px; font-weight: 700;
+    font-family: 'Nunito', sans-serif; cursor: pointer; color: var(--text);
+  }
+  .onboard-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0F6E56;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .onboard-overlay.hide { opacity: 0; pointer-events: none; transform: translateY(-20px); }
+  .onboard-logo { font-size: 64px; margin-bottom: 8px; }
+  .onboard-app-name { font-size: 28px; font-weight: 800; color: white; margin-bottom: 4px; }
+  .onboard-tagline { font-size: 13px; color: #9FE1CB; margin-bottom: 40px; text-align: center; }
+  .onboard-card { background: white; border-radius: 24px; padding: 28px 24px; width: 100%; max-width: 360px; }
+  .onboard-title { font-size: 20px; font-weight: 800; color: #2C2C2A; margin-bottom: 6px; }
+  .onboard-sub { font-size: 13px; color: #888780; margin-bottom: 20px; }
+  .onboard-input {
+    width: 100%; padding: 14px 16px;
+    background: #F4F6F5; border: 2px solid transparent;
+    border-radius: 14px; font-size: 16px; font-weight: 700;
+    font-family: 'Nunito', sans-serif; color: #2C2C2A;
+    outline: none; transition: border-color 0.2s; margin-bottom: 14px;
+  }
+  .onboard-input:focus { border-color: #0F6E56; }
+  .onboard-btn {
+    width: 100%; padding: 15px;
+    background: #0F6E56; color: white; border: none;
+    border-radius: 14px; font-size: 16px; font-weight: 800;
+    font-family: 'Nunito', sans-serif; cursor: pointer;
+  }
+  .onboard-features { display: flex; justify-content: space-around; margin-top: 32px; width: 100%; max-width: 360px; }
+  .onboard-feat { text-align: center; }
+  .onboard-feat-icon { font-size: 26px; margin-bottom: 6px; }
+  .onboard-feat-label { font-size: 11px; font-weight: 700; color: #9FE1CB; }
+
+  .budget-banner {
+    margin: 0 16px 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 700;
+  }
+  .budget-banner.safe { background: var(--primary-surface); color: var(--primary); }
+  .budget-banner.warning { background: #FFF3CD; color: #856404; }
+  .budget-banner.danger { background: var(--red-light); color: var(--red); }
+  .budget-banner-icon { font-size: 20px; flex-shrink: 0; }
+  .budget-progress-wrap { margin: 0 16px 12px; }
+  .budget-progress-track { height: 8px; background: var(--border); border-radius: 6px; overflow: hidden; margin-top: 6px; }
+  .budget-progress-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
+
+  /* ── Comparison Card ── */
+  .compare-card { background: white; border-radius: 16px; margin: 0 16px 12px; padding: 16px; }
+  .compare-title { font-size: 14px; font-weight: 800; margin-bottom: 14px; }
+  .compare-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .compare-month { font-size: 11px; font-weight: 700; color: var(--text-muted); width: 60px; flex-shrink: 0; }
+  .compare-bar-wrap { flex: 1; height: 28px; background: var(--bg); border-radius: 8px; overflow: hidden; position: relative; }
+  .compare-bar-fill { height: 100%; border-radius: 8px; display: flex; align-items: center; padding-left: 8px; transition: width 0.6s ease; min-width: 60px; }
+  .compare-bar-amt { font-size: 11px; font-weight: 800; color: white; white-space: nowrap; }
+  .compare-diff { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; text-align: center; }
+  .compare-diff.up { background: var(--red-light); color: var(--red); }
+  .compare-diff.down { background: var(--primary-surface); color: var(--primary); }
+  .compare-diff.same { background: var(--bg); color: var(--text-muted); }
+
+  /* ── Settings Budget/Notif ── */
+  .budget-input-wrap { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 10px; padding: 10px 14px; }
+  .budget-prefix { font-size: 16px; font-weight: 800; color: var(--primary); }
+  .budget-inp { border: none; background: transparent; outline: none; font-size: 16px; font-weight: 700; font-family: 'Nunito', sans-serif; color: var(--text); width: 100%; }
+  .set-btn { padding: 10px 18px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 800; font-family: 'Nunito', sans-serif; cursor: pointer; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ═══════════════ HOME SCREEN ═══════════════ -->
+  <!-- ═══════════════ ONBOARDING ═══════════════ -->
+  <div class="onboard-overlay" id="onboard">
+    <div class="onboard-logo">💰</div>
+    <div class="onboard-app-name">SpendSmart</div>
+    <div class="onboard-tagline">Track Expense & Budget<br>Free • Offline • Private</div>
+    <div class="onboard-card">
+      <div class="onboard-title">Hey there! 👋</div>
+      <div class="onboard-sub">What should we call you?</div>
+      <input class="onboard-input" type="text" id="onboard-name" placeholder="Enter your name" maxlength="20"
+        onkeydown="if(event.key==='Enter') completeOnboard()">
+      <button class="onboard-btn" onclick="completeOnboard()">Get Started →</button>
+    </div>
+    <div class="onboard-features">
+      <div class="onboard-feat">
+        <div class="onboard-feat-icon">📊</div>
+        <div class="onboard-feat-label">Smart Charts</div>
+      </div>
+      <div class="onboard-feat">
+        <div class="onboard-feat-icon">🔔</div>
+        <div class="onboard-feat-label">Budget Alerts</div>
+      </div>
+      <div class="onboard-feat">
+        <div class="onboard-feat-icon">🔒</div>
+        <div class="onboard-feat-label">100% Private</div>
+      </div>
+    </div>
+  </div>
   <div class="screen active" id="screen-home">
     <div class="header">
       <div class="header-row">
         <div>
           <div class="header-greeting" id="greeting">Good morning ☀️</div>
-          <div class="header-title">PaisaTrack</div>
+          <div class="header-title">SpendSmart</div>
         </div>
-        <div class="avatar">P</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          
+          <div class="avatar" id="user-avatar">K</div>
+        </div>
       </div>
       <div class="header-label">Spent this month</div>
       <div class="header-amount" id="home-total">₹0</div>
@@ -472,12 +652,13 @@
         </div>
       </div>
 
+      <!-- Month vs Month Comparison -->
+      <div id="compare-section" style="display:none"></div>
+
       <div class="section-header">
         <span class="section-title">Where money goes</span>
       </div>
-      <div class="card" id="home-categories">
-        <div class="empty"><div class="empty-sub">No expenses yet</div></div>
-      </div>
+      <div class="card" id="home-categories"></div>
 
       <div class="section-header">
         <span class="section-title">Recent</span>
@@ -531,7 +712,7 @@
       </div>
 
       <div style="margin: 0 16px;">
-        <button class="save-btn" onclick="saveExpense()">Save Expense</button>
+        <button class="save-btn" id="save-btn" onclick="saveExpense()">Save Expense</button>
       </div>
     </div>
   </div>
@@ -544,10 +725,17 @@
 
     <div class="search-box">
       <span class="search-icon">🔍</span>
-      <input class="search-input" type="text" placeholder="Search transactions..." oninput="renderHistory(this.value)">
+      <input class="search-input" id="history-search" type="text" placeholder="Search transactions..." oninput="renderHistory(this.value)">
     </div>
 
-    <div class="scroll-body" id="history-list" style="padding-top:4px;"></div>
+    <!-- Pull to refresh indicator -->
+    <div id="pull-indicator" style="text-align:center;padding:8px;font-size:12px;color:#888780;display:none;">
+      ↓ Pull down to refresh
+    </div>
+
+    <div class="scroll-body" id="history-scroll" style="padding-top:4px;" onscroll="handleHistoryScroll(this)">
+      <div id="history-list"></div>
+    </div>
   </div>
 
   <!-- ═══════════════ CHARTS SCREEN ═══════════════ -->
@@ -557,7 +745,17 @@
     </div>
 
     <div class="scroll-body">
-      <div class="chart-header" style="border-radius:0; background:var(--primary); margin:0 16px 12px; border-radius:16px; padding:16px;">
+      <!-- Period Selector -->
+      <div style="padding:12px 16px 4px;">
+        <div style="display:flex;gap:8px;">
+          <button class="period-btn active" id="period-7" onclick="setPeriod(7)">7 Days</button>
+          <button class="period-btn" id="period-30" onclick="setPeriod(30)">This Month</button>
+          <button class="period-btn" id="period-90" onclick="setPeriod(90)">3 Months</button>
+          <button class="period-btn" id="period-365" onclick="setPeriod(365)">This Year</button>
+        </div>
+      </div>
+
+      <div class="chart-header" style="border-radius:0; background:var(--primary); margin:8px 16px 12px; border-radius:16px; padding:16px;">
         <div>
           <div class="chart-month" id="chart-month-label"></div>
           <div class="chart-total" id="chart-total">₹0</div>
@@ -569,16 +767,16 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Last 7 days</div>
-        <div style="height:180px;">
-          <canvas id="bar-chart"></canvas>
+        <div class="card-title" id="bar-chart-title">Daily Spending</div>
+        <div style="height:180px;width:100%;position:relative;">
+          <canvas id="bar-chart" style="display:block;width:100%;height:180px;"></canvas>
         </div>
       </div>
 
       <div class="card" id="pie-section">
         <div class="card-title">By category</div>
-        <div style="height:200px; display:flex; justify-content:center;">
-          <canvas id="pie-chart"></canvas>
+        <div style="height:200px;width:100%;position:relative;display:flex;justify-content:center;">
+          <canvas id="pie-chart" style="display:block;"></canvas>
         </div>
         <div id="chart-legend" style="margin-top:16px;"></div>
       </div>
@@ -592,25 +790,54 @@
     </div>
 
     <div class="scroll-body">
-      <div class="settings-section-title">Tracking</div>
+
+      <!-- PROFILE -->
+      <div class="settings-section-title">Profile</div>
       <div class="settings-card">
-        <div class="settings-row">
-          <div class="settings-icon">🔔</div>
+        <div class="settings-row" onclick="openProfilePage()" style="cursor:pointer;">
+          <div class="settings-icon">👤</div>
           <div class="settings-info">
-            <div class="settings-label">UPI Auto-tracking</div>
-            <div class="settings-sub" id="notif-status">Available after Android app install</div>
+            <div class="settings-label">My Profile</div>
+            <div class="settings-sub">Update your name</div>
           </div>
-          <button class="toggle" id="notif-toggle" onclick="toggleNotif()"></button>
+          <span class="settings-arrow">›</span>
         </div>
       </div>
 
+      <!-- NOTIFICATIONS -->
+      <div class="settings-section-title">Notifications</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="openNotifPage()" style="cursor:pointer;">
+          <div class="settings-icon">🔔</div>
+          <div class="settings-info">
+            <div class="settings-label">Notifications</div>
+            <div class="settings-sub" id="notif-summary-sub">Manage alerts & reminders</div>
+          </div>
+          <span class="settings-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- BUDGET -->
+      <div class="settings-section-title">Budget</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="openBudgetPage()" style="cursor:pointer;">
+          <div class="settings-icon">💰</div>
+          <div class="settings-info">
+            <div class="settings-label">Budget & Limits</div>
+            <div class="settings-sub" id="budget-summary-sub">Set up monthly budget & daily limit</div>
+          </div>
+          <span class="settings-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- DATA -->
       <div class="settings-section-title">Data</div>
       <div class="settings-card">
         <div class="settings-row" onclick="exportCSV()">
           <div class="settings-icon">📊</div>
           <div class="settings-info">
             <div class="settings-label">Export to CSV</div>
-            <div class="settings-sub">Download all transactions</div>
+            <div class="settings-sub">Download all transactions as spreadsheet</div>
           </div>
           <span class="settings-arrow">›</span>
         </div>
@@ -618,27 +845,49 @@
           <div class="settings-icon">🗑️</div>
           <div class="settings-info">
             <div class="settings-label">Clear All Data</div>
-            <div class="settings-sub">Delete all transactions</div>
+            <div class="settings-sub">Permanently delete all transactions</div>
           </div>
           <span class="settings-arrow">›</span>
         </div>
       </div>
 
-      <div class="settings-section-title">About</div>
+      <!-- COMING SOON -->
+      <div class="settings-section-title">Coming Soon</div>
       <div class="settings-card">
         <div class="settings-row">
+          <div class="settings-icon">⚡</div>
+          <div class="settings-info">
+            <div class="settings-label">Auto UPI Tracking</div>
+            <div class="settings-sub">Auto-detect GPay, PhonePe, Paytm payments</div>
+          </div>
+          <button class="toggle" disabled style="opacity:0.4;cursor:not-allowed;"></button>
+        </div>
+      </div>
+
+      <!-- ABOUT -->
+      <div class="settings-section-title">About</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="rateApp()">
           <div class="settings-icon">⭐</div>
           <div class="settings-info">
-            <div class="settings-label">Rate PaisaTrack</div>
+            <div class="settings-label">Rate SpendSmart</div>
             <div class="settings-sub">Help us grow on Play Store</div>
+          </div>
+          <span class="settings-arrow">›</span>
+        </div>
+        <div class="settings-row" onclick="window.open('privacy_policy.html','_blank')" style="cursor:pointer;">
+          <div class="settings-icon">🔒</div>
+          <div class="settings-info">
+            <div class="settings-label">Privacy Policy</div>
+            <div class="settings-sub">How we handle your data</div>
           </div>
           <span class="settings-arrow">›</span>
         </div>
         <div class="settings-row">
           <div class="settings-icon">ℹ️</div>
           <div class="settings-info">
-            <div class="settings-label">App Version</div>
-            <div class="settings-sub">1.0.0 (Web Preview)</div>
+            <div class="settings-label">SpendSmart</div>
+            <div class="settings-sub">Version 1.0.0</div>
           </div>
         </div>
       </div>
@@ -647,6 +896,159 @@
         <span class="privacy-icon">🔒</span>
         <div class="privacy-text">100% private. All your expense data is stored only on your device. We never upload or share your financial data.</div>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ NOTIFICATIONS SCREEN ═══════════════ -->
+  <div class="screen" id="screen-notif">
+    <div class="appbar" style="padding-bottom:12px;">
+      <button class="appbar-back" onclick="closeNotifPage()">←</button>
+      <span class="appbar-title">Notifications</span>
+    </div>
+
+    <div class="scroll-body">
+      <div class="settings-section-title">Reminders</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-icon">🌙</div>
+          <div class="settings-info">
+            <div class="settings-label">Daily Reminder</div>
+            <div class="settings-sub">Get reminded to log expenses every day</div>
+          </div>
+          <button class="toggle" id="toggle-daily" onclick="toggleNotifType('daily')"></button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">📊</div>
+          <div class="settings-info">
+            <div class="settings-label">Weekly Summary</div>
+            <div class="settings-sub">Receive your weekly spending summary every Sunday</div>
+          </div>
+          <button class="toggle" id="toggle-weekly" onclick="toggleNotifType('weekly')"></button>
+        </div>
+      </div>
+
+      <div class="settings-section-title">Budget Alerts</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-icon">💰</div>
+          <div class="settings-info">
+            <div class="settings-label">Monthly Budget Alert</div>
+            <div class="settings-sub">Alert when monthly budget is 80% used</div>
+          </div>
+          <button class="toggle" id="toggle-budget" onclick="toggleNotifType('budget')"></button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">📅</div>
+          <div class="settings-info">
+            <div class="settings-label">Daily Limit Alert</div>
+            <div class="settings-sub">Alert when daily spending limit exceeded</div>
+          </div>
+          <button class="toggle" id="toggle-dailylimit" onclick="toggleNotifType('dailylimit')"></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════ PROFILE SCREEN ═══════════════ -->
+  <div class="screen" id="screen-profile">
+    <div class="appbar" style="padding-bottom:12px;">
+      <button class="appbar-back" onclick="closeProfilePage()">←</button>
+      <span class="appbar-title">My Profile</span>
+    </div>
+    <div class="scroll-body">
+      <div class="settings-section-title">Display Name</div>
+      <div class="settings-card">
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;width:100%">
+            <div class="settings-icon">👤</div>
+            <div class="settings-info">
+              <div class="settings-label">Your Name</div>
+              <div class="settings-sub">Shows in greeting on home screen</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;width:100%">
+            <input class="budget-inp" type="text" id="inp-profile-name" placeholder="Enter your name" maxlength="20"
+              style="flex:1;background:var(--bg);border-radius:10px;padding:10px 14px;border:none;outline:none;font-family:Nunito,sans-serif;font-size:14px;font-weight:600;">
+            <button class="set-btn" onclick="saveProfileName()">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ BUDGET SCREEN ═══════════════ -->
+  <div class="screen" id="screen-budget">
+    <div class="appbar" style="padding-bottom:12px;">
+      <button class="appbar-back" onclick="closeBudgetPage()">←</button>
+      <span class="appbar-title">Budget & Limits</span>
+    </div>
+
+    <div class="scroll-body">
+      <div class="settings-section-title">Monthly</div>
+      <div class="settings-card">
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;width:100%">
+            <div class="settings-icon">💰</div>
+            <div class="settings-info">
+              <div class="settings-label">Monthly Budget</div>
+              <div class="settings-sub">Warning shown when you exceed limit</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;width:100%">
+            <div class="budget-input-wrap" style="flex:1">
+              <span class="budget-prefix">₹</span>
+              <input class="budget-inp" type="number" id="inp-monthly-budget" placeholder="e.g. 15000">
+            </div>
+            <button class="set-btn" onclick="saveBudget()">Set</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section-title">Daily</div>
+      <div class="settings-card">
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;width:100%">
+            <div class="settings-icon">📅</div>
+            <div class="settings-info">
+              <div class="settings-label">Daily Spending Limit</div>
+              <div class="settings-sub">Alert when daily spending exceeds this</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;width:100%">
+            <div class="budget-input-wrap" style="flex:1">
+              <span class="budget-prefix">₹</span>
+              <input class="budget-inp" type="number" id="inp-daily-limit" placeholder="e.g. 500">
+            </div>
+            <button class="set-btn" onclick="saveDailyLimit()">Set</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="privacy-banner" style="margin-top:8px;">
+        <span class="privacy-icon">💡</span>
+        <div class="privacy-text">Set a monthly budget to track if you're overspending. Daily limit helps control day-to-day expenses.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ACTION SHEET ═══════════════ -->
+  <div class="action-overlay" id="action-overlay" onclick="closeActionSheet(event)">
+    <div class="action-sheet" id="action-sheet">
+      <div class="action-handle"></div>
+      <div class="action-txn-info">
+        <div class="action-merchant" id="action-merchant"></div>
+        <div class="action-amount" id="action-amount"></div>
+      </div>
+      <button class="action-btn" onclick="editTxnFromSheet()">
+        <span class="action-btn-icon">✏️</span>
+        <span class="action-btn-label">Edit Expense</span>
+      </button>
+      <button class="action-btn danger" onclick="deleteTxnFromSheet()">
+        <span class="action-btn-icon">🗑️</span>
+        <span class="action-btn-label">Delete Expense</span>
+      </button>
+      <button class="action-cancel" onclick="closeActionSheet()">Cancel</button>
     </div>
   </div>
 
@@ -677,7 +1079,7 @@
 // ══════════════════════════════════════════
 //  DATA LAYER — localStorage
 // ══════════════════════════════════════════
-const STORAGE_KEY = 'paisatrack_txns';
+const STORAGE_KEY = 'spendsmart_txns';
 
 const CATEGORIES = [
   { name: 'Food & Dining',     icon: '🍔', color: '#E8574A', keywords: ['zomato','swiggy','dominos','pizza','burger','restaurant','cafe','food','biryani','hotel','kfc','mcdonalds'] },
@@ -727,20 +1129,65 @@ function seedIfEmpty() {
   if (loadTxns().length > 0) return;
   const now = new Date();
   const d = (days, hours = 0) => new Date(now - days * 86400000 - hours * 3600000).toISOString();
+  const lm = (day, hours = 0) => new Date(now.getFullYear(), now.getMonth() - 1, day, hours).toISOString();
+
   const samples = [
-    { merchant: 'Zomato',         amount: 340,  category: 'Food & Dining',    date: d(0, 2) },
-    { merchant: 'Rapido',         amount: 120,  category: 'Travel',           date: d(0, 5) },
-    { merchant: 'Amazon',         amount: 899,  category: 'Shopping',         date: d(1, 1) },
-    { merchant: 'Swiggy',         amount: 285,  category: 'Food & Dining',    date: d(1, 4) },
-    { merchant: 'Jio Recharge',   amount: 299,  category: 'Bills & Recharge', date: d(2, 0) },
-    { merchant: 'Uber',           amount: 210,  category: 'Travel',           date: d(2, 3) },
-    { merchant: 'Blinkit',        amount: 645,  category: 'Groceries',        date: d(3, 1) },
-    { merchant: 'Netflix',        amount: 649,  category: 'Entertainment',    date: d(4, 2) },
-    { merchant: 'Apollo Pharmacy',amount: 380,  category: 'Health',           date: d(5, 0) },
-    { merchant: 'Dominos',        amount: 520,  category: 'Food & Dining',    date: d(6, 1) },
-    { merchant: 'Myntra',         amount: 1199, category: 'Shopping',         date: d(7, 2) },
-    { merchant: 'BookMyShow',     amount: 450,  category: 'Entertainment',    date: d(8, 3) },
+    // Today
+    { merchant: 'Zomato',           amount: 340,  category: 'Food & Dining',    date: d(0, 1) },
+    { merchant: 'Rapido',           amount: 85,   category: 'Travel',           date: d(0, 3) },
+    { merchant: 'Chai & Snacks',    amount: 60,   category: 'Food & Dining',    date: d(0, 5) },
+
+    // Yesterday
+    { merchant: 'Swiggy',           amount: 420,  category: 'Food & Dining',    date: d(1, 2) },
+    { merchant: 'Uber',             amount: 180,  category: 'Travel',           date: d(1, 6) },
+    { merchant: 'DMart',            amount: 1240, category: 'Groceries',        date: d(1, 8) },
+
+    // 2 days ago
+    { merchant: 'Amazon',           amount: 899,  category: 'Shopping',         date: d(2, 1) },
+    { merchant: 'Jio Recharge',     amount: 299,  category: 'Bills & Recharge', date: d(2, 4) },
+
+    // 3 days ago
+    { merchant: 'Blinkit',          amount: 645,  category: 'Groceries',        date: d(3, 2) },
+    { merchant: 'Ola',              amount: 120,  category: 'Travel',           date: d(3, 7) },
+    { merchant: 'Hotel Biryani',    amount: 280,  category: 'Food & Dining',    date: d(3, 9) },
+
+    // 4 days ago
+    { merchant: 'Netflix',          amount: 649,  category: 'Entertainment',    date: d(4, 0) },
+    { merchant: 'Medplus',          amount: 320,  category: 'Health',           date: d(4, 3) },
+
+    // 5 days ago
+    { merchant: 'Dominos',          amount: 520,  category: 'Food & Dining',    date: d(5, 1) },
+    { merchant: 'BESCOM Bill',      amount: 850,  category: 'Bills & Recharge', date: d(5, 5) },
+
+    // 6 days ago
+    { merchant: 'Myntra',           amount: 1199, category: 'Shopping',         date: d(6, 2) },
+    { merchant: 'Zepto',            amount: 380,  category: 'Groceries',        date: d(6, 6) },
+
+    // 7 days ago
+    { merchant: 'BookMyShow',       amount: 450,  category: 'Entertainment',    date: d(7, 3) },
+    { merchant: 'Auto Rickshaw',    amount: 65,   category: 'Travel',           date: d(7, 8) },
+
+    // 10 days ago
+    { merchant: 'Apollo Pharmacy',  amount: 580,  category: 'Health',           date: d(10, 1) },
+    { merchant: 'KFC',              amount: 420,  category: 'Food & Dining',    date: d(10, 4) },
+
+    // 14 days ago
+    { merchant: 'Flipkart',         amount: 2499, category: 'Shopping',         date: d(14, 2) },
+    { merchant: 'Airtel Broadband', amount: 799,  category: 'Bills & Recharge', date: d(14, 6) },
+
+    // Last month (for comparison)
+    { merchant: 'Swiggy',           amount: 390,  category: 'Food & Dining',    date: lm(2,  1) },
+    { merchant: 'Ola',              amount: 160,  category: 'Travel',           date: lm(4,  0) },
+    { merchant: 'Flipkart',         amount: 1599, category: 'Shopping',         date: lm(7,  2) },
+    { merchant: 'Airtel',           amount: 349,  category: 'Bills & Recharge', date: lm(10, 0) },
+    { merchant: 'Zomato',           amount: 275,  category: 'Food & Dining',    date: lm(13, 1) },
+    { merchant: 'Uber',             amount: 220,  category: 'Travel',           date: lm(16, 3) },
+    { merchant: 'BigBasket',        amount: 980,  category: 'Groceries',        date: lm(20, 0) },
+    { merchant: 'PVR Cinemas',      amount: 600,  category: 'Entertainment',    date: lm(23, 2) },
+    { merchant: 'Medplus',          amount: 450,  category: 'Health',           date: lm(26, 0) },
+    { merchant: 'Amazon',           amount: 1299, category: 'Shopping',         date: lm(28, 1) },
   ];
+
   samples.forEach((s, i) => { s.id = Date.now() + i; s.source = 'sample'; });
   saveTxns(samples);
 }
@@ -787,6 +1234,7 @@ function showToast(msg) {
 let currentTab = 'home';
 let barChartInstance = null;
 let pieChartInstance = null;
+let chartsRendered = false;
 
 function switchTab(tab) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -796,9 +1244,32 @@ function switchTab(tab) {
   currentTab = tab;
 
   if (tab === 'home') renderHome();
-  if (tab === 'history') renderHistory('');
-  if (tab === 'charts') renderCharts();
+  if (tab === 'history') refreshHistory();
+  if (tab === 'charts') {
+    // Reset to 7 days every time charts tab opens
+    currentPeriod = 7;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    const btn7 = document.getElementById('period-7');
+    if (btn7) btn7.classList.add('active');
+    // Wait for screen to be fully painted and canvas to have dimensions
+    setTimeout(() => {
+      renderCharts();
+      setTimeout(() => {
+        const canvas = document.getElementById('bar-chart');
+        if (canvas && canvas.offsetWidth === 0) {
+          renderCharts();
+        } else {
+          if (barChartInstance) barChartInstance.resize();
+          if (pieChartInstance) pieChartInstance.resize();
+        }
+      }, 200);
+    }, 200);
+  }
+  if (tab === 'settings') loadSettingsValues();
 }
+
+
+
 
 // ══════════════════════════════════════════
 //  HOME
@@ -808,61 +1279,97 @@ function renderHome() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // greeting
+  // greeting with username
   const h = now.getHours();
-  const g = h < 12 ? 'Good morning ☀️' : h < 17 ? 'Good afternoon 👋' : 'Good evening 🌙';
-  document.getElementById('greeting').textContent = g;
+  const name = loadUsername();
+  const timeGreet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const emoji = h < 12 ? '☀️' : h < 17 ? '👋' : '🌙';
+  const greetMsg = name ? `${timeGreet}, ${name}! ${emoji}` : `${timeGreet} ${emoji}`;
+  const greetEl = document.getElementById('greeting');
+  if (greetEl) greetEl.textContent = greetMsg;
+  const avatar = document.getElementById('user-avatar');
+  if (avatar) avatar.textContent = name ? name[0].toUpperCase() : 'S';
+  const monthEl = document.getElementById('home-month');
+  if (monthEl) monthEl.textContent = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) + ' • ' + txns.length + ' transactions';
 
-  // month label
-  document.getElementById('home-month').textContent =
-    now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) + ' • ' + txns.length + ' transactions';
-
-  // month totals
+  // month totals — timezone safe comparison
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
   const monthTxns = txns.filter(t => {
-    const d = new Date(t.date);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    try {
+      const d = new Date(t.date);
+      return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+    } catch(e) { return false; }
   });
-  const monthTotal = monthTxns.reduce((s, t) => s + t.amount, 0);
-  document.getElementById('home-total').textContent = fmt(monthTotal);
+  const monthTotal = monthTxns.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
 
-  // today
+  // today totals
   const todayTxns = txns.filter(t => new Date(t.date) >= today);
-  document.getElementById('home-today').textContent = fmt(todayTxns.reduce((s, t) => s + t.amount, 0));
-  document.getElementById('home-count').textContent = monthTxns.length;
+  const todayTotal = todayTxns.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
 
-  // categories
+  const totalEl = document.getElementById('home-total');
+  if (totalEl) totalEl.textContent = fmt(monthTotal);
+  const todayEl = document.getElementById('home-today');
+  if (todayEl) todayEl.textContent = fmt(todayTotal);
+  const countEl = document.getElementById('home-count');
+  if (countEl) countEl.textContent = monthTxns.length;
+
+  // Budget banner
+  renderBudgetBanner(monthTotal);
+
+  // Daily limit check
+  checkDailyLimit(todayTotal);
+
+  // Month comparison
+  renderComparison(monthTotal);
+
+  // ── Categories ──
   const catTotals = {};
-  monthTxns.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
-  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  for (const t of monthTxns) {
+    const k = t.category || 'Other';
+    catTotals[k] = (catTotals[k] || 0) + t.amount;
+  }
+  const catEntries = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 4);
   const catEl = document.getElementById('home-categories');
-  if (sorted.length === 0) {
-    catEl.innerHTML = '<div class="empty"><div class="empty-sub">No expenses yet this month</div></div>';
-  } else {
-    catEl.innerHTML = sorted.map(([cat, amt]) => {
-      const meta = getCatMeta(cat);
-      const pct = Math.round((amt / monthTotal) * 100);
-      return `<div class="cat-row">
-        <div class="cat-info">
-          <div class="cat-left">${meta.icon} <span>${cat}</span></div>
-          <div class="cat-amount">${fmt(amt)}</div>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" style="width:${pct}%;background:${meta.color}"></div>
-        </div>
-      </div>`;
-    }).join('');
+  if (catEl) {
+    if (catEntries.length === 0) {
+      catEl.innerHTML = '<div style="text-align:center;padding:20px;color:#888780;font-size:13px;">No expenses yet this month</div>';
+    } else {
+      catEl.innerHTML = catEntries.map(([cat, amt]) => {
+        const meta = getCatMeta(cat);
+        const pct = monthTotal > 0 ? Math.round((amt / monthTotal) * 100) : 0;
+        return `<div class="cat-row">
+          <div class="cat-info">
+            <div class="cat-left">${meta.icon} <span>${cat}</span></div>
+            <div class="cat-amount">${fmt(amt)}</div>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${pct}%;background:${meta.color}"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
   }
 
-  // recent
-  const recent = txns.slice(0, 5);
-  document.getElementById('home-recent').innerHTML = recent.length === 0
-    ? `<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">No transactions yet</div><div class="empty-sub">Tap + Add Expense to start</div></div>`
-    : recent.map(t => txnTileHTML(t)).join('');
+  // ── Recent ──
+  const sortedAll = txns.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  const recentEl = document.getElementById('home-recent');
+  if (recentEl) {
+    if (sortedAll.length === 0) {
+      recentEl.innerHTML = `<div style="text-align:center;padding:32px 16px;">
+        <div style="font-size:48px;margin-bottom:12px;">💸</div>
+        <div style="font-size:15px;font-weight:700;color:#2C2C2A;">No transactions yet</div>
+        <div style="font-size:12px;color:#888780;margin-top:6px;">Tap + Add Expense to start</div>
+      </div>`;
+    } else {
+      recentEl.innerHTML = sortedAll.slice(0, 5).map(t => txnTileHTML(t)).join('');
+    }
+  }
 }
 
 function txnTileHTML(t) {
   const meta = getCatMeta(t.category);
-  return `<div class="txn-tile" id="txn-${t.id}">
+  return `<div class="txn-tile" id="txn-${t.id}" onclick="openActionSheet(${t.id})">
     <div class="txn-icon" style="background:${meta.color}22">${meta.icon}</div>
     <div class="txn-info">
       <div class="txn-merchant">${t.merchant}</div>
@@ -872,14 +1379,85 @@ function txnTileHTML(t) {
       <div class="txn-amount">−${fmt(t.amount)}</div>
       ${t.source === 'sample' ? '<div class="upi-badge">SAMPLE</div>' : '<div class="upi-badge">UPI</div>'}
     </div>
-    <div class="txn-delete-bg" onclick="deleteTxnUI(${t.id})">🗑️</div>
   </div>`;
 }
 
 // ══════════════════════════════════════════
-//  ADD EXPENSE
+//  ACTION SHEET (Edit / Delete)
 // ══════════════════════════════════════════
-let editingId = null;
+let actionTxnId = null;
+
+function openActionSheet(id) {
+  const txns = loadTxns();
+  const t = txns.find(t => t.id === id);
+  if (!t) return;
+  actionTxnId = id;
+  document.getElementById('action-merchant').textContent = t.merchant;
+  document.getElementById('action-amount').textContent = `−${fmt(t.amount)} • ${t.category}`;
+  const overlay = document.getElementById('action-overlay');
+  overlay.classList.add('show');
+}
+
+function closeActionSheet(e) {
+  if (e && e.target !== document.getElementById('action-overlay')) return;
+  document.getElementById('action-overlay').classList.remove('show');
+  actionTxnId = null;
+}
+
+function closeActionSheetDirect() {
+  document.getElementById('action-overlay').classList.remove('show');
+  actionTxnId = null;
+}
+
+function refreshHistory() {
+  const searchEl = document.getElementById('history-search');
+  const val = searchEl ? searchEl.value : '';
+  // Force DOM update immediately
+  const el = document.getElementById('history-list');
+  if (el) {
+    renderHistory(val);
+    // Force browser repaint
+    el.style.display = 'none';
+    el.offsetHeight; // trigger reflow
+    el.style.display = '';
+  }
+}
+
+function deleteTxnFromSheet() {
+  if (!actionTxnId) return;
+  if (!confirm('Delete this transaction?')) return;
+  deleteTxn(actionTxnId);
+  closeActionSheetDirect();
+  showToast('Transaction deleted 🗑️');
+  requestAnimationFrame(() => {
+    renderHome();
+    setTimeout(() => refreshHistory(), 50);
+  });
+}
+
+function editTxnFromSheet() {
+  if (!actionTxnId) return;
+  const txns = loadTxns();
+  const t = txns.find(t => t.id === actionTxnId);
+  if (!t) return;
+  closeActionSheetDirect();
+  openEditExpense(t);
+}
+
+function openEditExpense(t) {
+  editingId = t.id;
+  selectedCategory = t.category;
+  document.getElementById('inp-amount').value = t.amount;
+  document.getElementById('inp-merchant').value = t.merchant;
+  document.getElementById('inp-note').value = t.note || '';
+  document.getElementById('inp-date').value = new Date(t.date).toISOString().split('T')[0];
+  document.getElementById('add-title').textContent = 'Edit Expense';
+  document.getElementById('save-btn').textContent = 'Update Expense';
+  renderCatChips();
+  document.querySelector('.screen.active').classList.remove('active');
+  document.getElementById('screen-add').classList.add('active');
+  setTimeout(() => document.getElementById('inp-amount').focus(), 300);
+}
 let selectedCategory = 'Food & Dining';
 
 function openAddExpense() {
@@ -890,6 +1468,7 @@ function openAddExpense() {
   document.getElementById('inp-note').value = '';
   document.getElementById('inp-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('add-title').textContent = 'Add Expense';
+  document.getElementById('save-btn').textContent = 'Save Expense';
   renderCatChips();
   document.querySelector('.screen.active').classList.remove('active');
   document.getElementById('screen-add').classList.add('active');
@@ -936,19 +1515,76 @@ function saveExpense() {
   if (!merchant) { showToast('Please enter merchant name'); return; }
   if (!date) { showToast('Please select a date'); return; }
 
-  const txn = {
-    merchant,
-    amount,
-    category: selectedCategory,
-    note,
-    date: new Date(date).toISOString(),
-    source: 'manual',
-  };
+  // Fix: parse date as local time not UTC
+  const [y, m, d] = date.split('-').map(Number);
+  const localDate = new Date(y, m - 1, d, new Date().getHours(), new Date().getMinutes()).toISOString();
 
-  addTxn(txn);
-  showToast('Expense saved! 💚');
+  if (editingId) {
+    const txns = loadTxns();
+    const idx = txns.findIndex(t => t.id === editingId);
+    if (idx !== -1) {
+      txns[idx] = { ...txns[idx], merchant, amount, category: selectedCategory, note, date: localDate };
+      saveTxns(txns);
+    }
+    showToast('Expense updated! ✅');
+    editingId = null;
+  } else {
+    addTxn({ merchant, amount, category: selectedCategory, note, date: localDate, source: 'manual' });
+    showToast('Expense saved! 💚');
+  }
+
   closeAddExpense();
-  renderHome();
+  requestAnimationFrame(() => {
+    renderHome();
+    setTimeout(() => refreshHistory(), 50);
+  });
+}
+
+// ══════════════════════════════════════════
+//  PULL TO REFRESH
+// ══════════════════════════════════════════
+let pullStartY = 0;
+let isPulling = false;
+
+document.addEventListener('touchstart', e => {
+  const histScroll = document.getElementById('history-scroll');
+  if (histScroll && histScroll.contains(e.target) && histScroll.scrollTop === 0) {
+    pullStartY = e.touches[0].clientY;
+    isPulling = true;
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!isPulling) return;
+  const pullDist = e.touches[0].clientY - pullStartY;
+  const indicator = document.getElementById('pull-indicator');
+  if (pullDist > 40 && indicator) {
+    indicator.style.display = 'block';
+    indicator.textContent = pullDist > 80 ? '↑ Release to refresh' : '↓ Pull down to refresh';
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (!isPulling) return;
+  const pullDist = e.changedTouches[0].clientY - pullStartY;
+  const indicator = document.getElementById('pull-indicator');
+  if (pullDist > 80) {
+    if (indicator) { indicator.textContent = '✓ Refreshing...'; }
+    setTimeout(() => {
+      refreshHistory();
+      if (indicator) indicator.style.display = 'none';
+      showToast('History refreshed ✓');
+    }, 400);
+  } else {
+    if (indicator) indicator.style.display = 'none';
+  }
+  isPulling = false;
+  pullStartY = 0;
+}, { passive: true });
+
+function handleHistoryScroll(el) {
+  const indicator = document.getElementById('pull-indicator');
+  if (el.scrollTop > 0 && indicator) indicator.style.display = 'none';
 }
 
 // ══════════════════════════════════════════
@@ -962,8 +1598,22 @@ function renderHistory(search = '') {
   );
 
   const el = document.getElementById('history-list');
+  if (!el) return;
   if (filtered.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No transactions found</div></div>`;
+    const isSearch = search.length > 0;
+    el.innerHTML = `
+      <div style="text-align:center;padding:48px 24px;">
+        <div style="font-size:56px;margin-bottom:16px;">${isSearch ? '🔍' : '💸'}</div>
+        <div style="font-size:16px;font-weight:800;color:#2C2C2A;margin-bottom:8px;">
+          ${isSearch ? 'No results found' : 'No transactions yet'}
+        </div>
+        <div style="font-size:13px;color:#888780;line-height:1.5;">
+          ${isSearch
+            ? `No transactions match "<strong>${search}</strong>"`
+            : 'Start tracking your expenses by tapping the <strong>+ Add Expense</strong> button'}
+        </div>
+        ${!isSearch ? `<button onclick="openAddExpense()" style="margin-top:20px;padding:12px 28px;background:#0F6E56;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:Nunito,sans-serif;cursor:pointer;">+ Add First Expense</button>` : ''}
+      </div>`;
     return;
   }
 
@@ -1002,33 +1652,83 @@ function renderCharts() {
   const txns = loadTxns();
   const now = new Date();
 
-  // month totals
-  const monthTxns = txns.filter(t => {
-    const d = new Date(t.date);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-  const total = monthTxns.reduce((s, t) => s + t.amount, 0);
+  // Filter by period
+  const periodStart = new Date(now.getTime() - currentPeriod * 86400000);
+  const periodTxns = txns.filter(t => new Date(t.date) >= periodStart);
+  const total = periodTxns.reduce((s, t) => s + t.amount, 0);
 
-  document.getElementById('chart-month-label').textContent =
-    now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  // Period label
+  const periodLabels = { 7: 'Last 7 Days', 30: 'This Month', 90: 'Last 3 Months', 365: 'This Year' };
+  document.getElementById('chart-month-label').textContent = periodLabels[currentPeriod] || 'Custom';
   document.getElementById('chart-total').textContent = fmt(total);
-  document.getElementById('chart-count').textContent = monthTxns.length;
+  document.getElementById('chart-count').textContent = periodTxns.length;
 
-  // last 7 days bar chart
+  // Bar chart — dynamic based on period
   const labels = [], data = [];
-  for (let i = 6; i >= 0; i--) {
-    const day = new Date(now);
-    day.setDate(now.getDate() - i);
-    labels.push(day.toLocaleDateString('en-IN', { weekday: 'short' }));
-    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
-    const dayEnd = new Date(dayStart.getTime() + 86400000);
-    const dayTotal = txns.filter(t => {
-      const d = new Date(t.date);
-      return d >= dayStart && d < dayEnd;
-    }).reduce((s, t) => s + t.amount, 0);
-    data.push(dayTotal);
+  const isThisMonth = currentPeriod === 30;
+  const isWeekly = currentPeriod === 90;
+  const isMonthly = currentPeriod === 365;
+
+  document.getElementById('bar-chart-title').textContent =
+    currentPeriod <= 7 ? 'Daily Spending' :
+    isThisMonth ? 'Weekly Spending' :
+    isWeekly ? 'Weekly Spending' : 'Monthly Spending';
+
+  if (isThisMonth) {
+    // Show week by week for current month e.g. "1-7", "8-14", "15-21", "22-31"
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // last day of month
+    const totalDays = monthEnd.getDate();
+
+    // Build weeks: 1-7, 8-14, 15-21, 22-end
+    const weeks = [];
+    let day = 1;
+    while (day <= totalDays) {
+      const weekEnd = Math.min(day + 6, totalDays);
+      weeks.push({ from: day, to: weekEnd });
+      day = weekEnd + 1;
+    }
+
+    weeks.forEach(({ from, to }) => {
+      const start = new Date(now.getFullYear(), now.getMonth(), from);
+      const end = new Date(now.getFullYear(), now.getMonth(), to + 1);
+      const weekTotal = txns.filter(t => {
+        const d = new Date(t.date);
+        return d >= start && d < end;
+      }).reduce((s, t) => s + t.amount, 0);
+      labels.push(`${from}-${to}`);
+      data.push(weekTotal);
+    });
+
+  } else {
+    const barDays = currentPeriod <= 7 ? currentPeriod : isWeekly ? Math.ceil(currentPeriod / 7) : 12;
+
+    for (let i = barDays - 1; i >= 0; i--) {
+      let label, start, end;
+      if (isMonthly) {
+        const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        label = m.toLocaleDateString('en-IN', { month: 'short' });
+        start = m;
+        end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      } else if (isWeekly) {
+        start = new Date(now.getTime() - (i + 1) * 7 * 86400000);
+        end = new Date(now.getTime() - i * 7 * 86400000);
+        const s = start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const e = end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        label = `${s}`;
+      } else {
+        const day = new Date(now);
+        day.setDate(now.getDate() - i);
+        label = day.toLocaleDateString('en-IN', { weekday: 'short' });
+        start = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+        end = new Date(start.getTime() + 86400000);
+      }
+      labels.push(label);
+      data.push(txns.filter(t => { const d = new Date(t.date); return d >= start && d < end; }).reduce((s, t) => s + t.amount, 0));
+    }
   }
 
+  const tickColor = '#888780';
   if (barChartInstance) barChartInstance.destroy();
   barChartInstance = new Chart(document.getElementById('bar-chart'), {
     type: 'bar',
@@ -1042,24 +1742,41 @@ function renderCharts() {
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: {
-        callbacks: { label: ctx => fmt(ctx.raw) }
-      }},
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: chartsRendered ? 300 : 500 },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmt(ctx.raw) } } },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'Nunito', weight: '700', size: 11 }, color: '#888780' } },
+        x: { grid: { display: false }, ticks: { font: { family: 'Nunito', weight: '700', size: 10 }, color: tickColor, maxRotation: 45 } },
         y: { display: false, grid: { display: false } }
       }
     }
   });
 
-  // pie chart
+  // Force immediate resize after creation
+  requestAnimationFrame(() => {
+    if (barChartInstance) barChartInstance.resize();
+  });
+
+  // pie chart — use period txns
   const catTotals = {};
-  monthTxns.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+  periodTxns.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
   const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
 
+  // Restore pie section HTML if it was replaced by empty state
+  const pieSection = document.getElementById('pie-section');
+  if (!document.getElementById('pie-chart')) {
+    pieSection.innerHTML = `
+      <div class="card-title">By category</div>
+      <div style="height:200px; display:flex; justify-content:center;">
+        <canvas id="pie-chart"></canvas>
+      </div>
+      <div id="chart-legend" style="margin-top:16px;"></div>`;
+  }
+
   if (sortedCats.length === 0) {
-    document.getElementById('pie-section').innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data this month</div></div>`;
+    pieSection.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data for this period</div></div>`;
+    chartsRendered = true;
     return;
   }
 
@@ -1077,6 +1794,7 @@ function renderCharts() {
     options: {
       responsive: true, maintainAspectRatio: false,
       cutout: '55%',
+      animation: { duration: chartsRendered ? 300 : 500 },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)} (${Math.round(ctx.raw / total * 100)}%)` } }
@@ -1100,6 +1818,591 @@ function renderCharts() {
       </div>
     </div>`;
   }).join('');
+
+  chartsRendered = true;
+}
+
+// ══════════════════════════════════════════
+//  ONBOARDING
+// ══════════════════════════════════════════
+function checkOnboarding() {
+  const name = loadUsername();
+  if (name) {
+    // Already has name — hide onboarding immediately
+    document.getElementById('onboard').style.display = 'none';
+  } else {
+    // First time — show onboarding
+    document.getElementById('onboard').style.display = 'flex';
+    setTimeout(() => document.getElementById('onboard-name').focus(), 400);
+  }
+}
+
+function completeOnboard() {
+  const name = document.getElementById('onboard-name').value.trim();
+  if (!name) {
+    document.getElementById('onboard-name').style.borderColor = '#E8574A';
+    document.getElementById('onboard-name').placeholder = 'Please enter your name!';
+    return;
+  }
+  localStorage.setItem(NAME_KEY, name);
+  const overlay = document.getElementById('onboard');
+  overlay.classList.add('hide');
+  setTimeout(() => { overlay.style.display = 'none'; }, 400);
+  renderHome();
+}
+
+// ══════════════════════════════════════════
+//  USERNAME
+// ══════════════════════════════════════════
+const NAME_KEY = 'spendsmart_name';
+
+function loadUsername() { return localStorage.getItem(NAME_KEY) || ''; }
+
+function saveUsername() {
+  const name = document.getElementById('inp-username').value.trim();
+  if (!name) { showToast('Please enter your name'); return; }
+  localStorage.setItem(NAME_KEY, name);
+  showToast('Name saved! 👋');
+  renderHome();
+}
+
+// ══════════════════════════════════════════
+//  CHART PERIOD
+// ══════════════════════════════════════════
+let currentPeriod = 7;
+
+function setPeriod(days) {
+  currentPeriod = days;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('period-' + days).classList.add('active');
+  renderCharts();
+}
+
+// ══════════════════════════════════════════
+//  BUDGET & ALERTS
+// ══════════════════════════════════════════
+const BUDGET_KEY = 'spendsmart_budget';
+const DAILY_KEY  = 'spendsmart_daily';
+
+function loadBudget() { return parseFloat(localStorage.getItem(BUDGET_KEY)) || 0; }
+function loadDailyLimit() { return parseFloat(localStorage.getItem(DAILY_KEY)) || 0; }
+
+function openProfilePage() {
+  document.getElementById('screen-settings').classList.remove('active');
+  document.getElementById('screen-profile').classList.add('active');
+  const name = loadUsername();
+  if (name) document.getElementById('inp-profile-name').value = name;
+}
+
+function closeProfilePage() {
+  document.getElementById('screen-profile').classList.remove('active');
+  document.getElementById('screen-settings').classList.add('active');
+}
+
+function saveProfileName() {
+  const name = document.getElementById('inp-profile-name').value.trim();
+  if (!name) { showToast('Please enter your name'); return; }
+  localStorage.setItem(NAME_KEY, name);
+  showToast('Name updated! 👋');
+  renderHome();
+  closeProfilePage();
+}
+
+function openBudgetPage() {
+  document.getElementById('screen-settings').classList.remove('active');
+  document.getElementById('screen-budget').classList.add('active');
+  const budget = loadBudget();
+  const daily = loadDailyLimit();
+  if (budget) document.getElementById('inp-monthly-budget').value = budget;
+  if (daily) document.getElementById('inp-daily-limit').value = daily;
+}
+
+function closeBudgetPage() {
+  document.getElementById('screen-budget').classList.remove('active');
+  document.getElementById('screen-settings').classList.add('active');
+  updateBudgetSummary();
+}
+
+function saveBudget() {
+  const val = parseFloat(document.getElementById('inp-monthly-budget').value);
+  if (!val || val <= 0) { showToast('Enter a valid budget amount'); return; }
+  localStorage.setItem(BUDGET_KEY, val);
+  showToast('Monthly budget set to ' + fmt(val) + ' 💰');
+  updateBudgetSummary();
+  renderHome();
+}
+
+function saveDailyLimit() {
+  const val = parseFloat(document.getElementById('inp-daily-limit').value);
+  if (!val || val <= 0) { showToast('Enter a valid daily limit'); return; }
+  localStorage.setItem(DAILY_KEY, val);
+  showToast('Daily limit set to ' + fmt(val) + ' 📅');
+  updateBudgetSummary();
+  renderHome();
+}
+
+function renderBudgetBanner(monthTotal) {
+  const budget = loadBudget();
+  const el = document.getElementById('budget-banner');
+  if (!el) return;
+  if (!budget) { el.style.display = 'none'; return; }
+
+  const pct = Math.round((monthTotal / budget) * 100);
+  const remaining = budget - monthTotal;
+  let cls, icon, msg;
+
+  if (pct >= 100) {
+    cls = 'danger'; icon = '🚨';
+    msg = `Budget exceeded by ${fmt(Math.abs(remaining))}! You set ₹${budget.toLocaleString('en-IN')} limit.`;
+  } else if (pct >= 80) {
+    cls = 'warning'; icon = '⚠️';
+    msg = `${pct}% of budget used. Only ${fmt(remaining)} left this month!`;
+  } else {
+    cls = 'safe'; icon = '✅';
+    msg = `${fmt(remaining)} remaining from your ${fmt(budget)} monthly budget.`;
+  }
+
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <div class="budget-banner ${cls}">
+      <span class="budget-banner-icon">${icon}</span>
+      <div style="flex:1">
+        <div>${msg}</div>
+        <div class="budget-progress-track" style="margin-top:6px">
+          <div class="budget-progress-fill" style="width:${Math.min(pct,100)}%;background:${cls==='safe'?'#1D9E75':cls==='warning'?'#EF9F27':'#A32D2D'}"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+  const pct = Math.round((monthTotal / budget) * 100);
+  const remaining = budget - monthTotal;
+  let cls, icon, msg;
+
+  if (pct >= 100) {
+    cls = 'danger'; icon = '🚨';
+    msg = `Budget exceeded by ${fmt(Math.abs(remaining))}! You set ₹${budget.toLocaleString('en-IN')} limit.`;
+  } else if (pct >= 80) {
+    cls = 'warning'; icon = '⚠️';
+    msg = `${pct}% of budget used. Only ${fmt(remaining)} left this month!`;
+  } else {
+    cls = 'safe'; icon = '✅';
+    msg = `${fmt(remaining)} remaining from your ${fmt(budget)} monthly budget.`;
+  }
+
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <div class="budget-banner ${cls}">
+      <span class="budget-banner-icon">${icon}</span>
+      <div style="flex:1">
+        <div>${msg}</div>
+        <div class="budget-progress-track" style="margin-top:6px">
+          <div class="budget-progress-fill" style="width:${Math.min(pct,100)}%;background:${cls==='safe'?'#1D9E75':cls==='warning'?'#EF9F27':'#A32D2D'}"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+//  PUSH NOTIFICATIONS
+// ══════════════════════════════════════════
+const NOTIF_DAILY_KEY      = 'spendsmart_notif_daily';
+const NOTIF_WEEKLY_KEY     = 'spendsmart_notif_weekly';
+const NOTIF_BUDGET_KEY     = 'spendsmart_notif_budget';
+const NOTIF_DAILYLIMIT_KEY = 'spendsmart_notif_dailylimit';
+const LAST_DAILY_KEY       = 'ssendsmart_last_daily';
+const LAST_WEEKLY_KEY      = 'spendsmart_last_weekly';
+
+function isNotifEnabled(type) {
+  return localStorage.getItem('spendsmart_notif_' + type) === '1';
+}
+
+function setNotifEnabled(type, val) {
+  localStorage.setItem('spendsmart_notif_' + type, val ? '1' : '0');
+}
+
+function anyNotifEnabled() {
+  return ['daily','weekly','budget','dailylimit'].some(t => isNotifEnabled(t));
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    showToast('Notifications not supported on this device');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    showToast('Notifications blocked. Enable in browser settings.');
+    return false;
+  }
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+async function toggleNotifType(type) {
+  const toggleEl = document.getElementById('toggle-' + type);
+  const current = isNotifEnabled(type);
+  if (!current) {
+    const granted = await requestNotifPermission();
+    if (!granted) { toggleEl.classList.remove('on'); return; }
+    setNotifEnabled(type, true);
+    toggleEl.classList.add('on');
+    const labels = {
+      daily: 'Daily reminders at 9PM enabled! 🌙',
+      weekly: 'Weekly summary on Sunday enabled! 📊',
+      budget: 'Monthly budget alerts enabled! 💰',
+      dailylimit: 'Daily limit alerts enabled! 📅',
+    };
+    showToast(labels[type]);
+    sendNotification('SpendSmart 💰', `${labels[type]} We'll keep you posted!`);
+    scheduleNotifications();
+  } else {
+    setNotifEnabled(type, false);
+    toggleEl.classList.remove('on');
+    showToast('Notification disabled');
+  }
+  updateNotifSummary();
+}
+
+function openNotifPage() {
+  document.getElementById('screen-settings').classList.remove('active');
+  document.getElementById('screen-notif').classList.add('active');
+  loadNotifToggles();
+}
+
+function closeNotifPage() {
+  document.getElementById('screen-notif').classList.remove('active');
+  document.getElementById('screen-settings').classList.add('active');
+  updateNotifSummary();
+}
+
+function loadNotifToggles() {
+  ['daily','weekly','budget','dailylimit'].forEach(type => {
+    const el = document.getElementById('toggle-' + type);
+    if (el) el.classList.toggle('on', isNotifEnabled(type));
+  });
+}
+
+function updateNotifSummary() { /* static subtitle — no dynamic update needed */ }
+function updateBudgetSummary() { /* static subtitle — no dynamic update needed */ }
+
+function sendNotification(title, body) {
+  if (Notification.permission !== 'granted') return;
+  new Notification(title, { body, icon: 'icon-192.png', badge: 'icon-96.png' });
+}
+
+function scheduleNotifications() {
+  const now = new Date();
+
+  // Daily Reminder at 9PM
+  if (isNotifEnabled('daily')) {
+    const ninepm = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0, 0);
+    let ms = ninepm - now;
+    if (ms < 0) ms += 86400000;
+    setTimeout(() => {
+      const txns = loadTxns();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayTxns = txns.filter(t => new Date(t.date) >= todayStart);
+      const name = loadUsername();
+      if (todayTxns.length === 0) {
+        sendNotification(`Hey ${name || 'there'}! 👋`, "Don't forget to log today's expenses. Tap to open SpendSmart!");
+      } else {
+        const total = todayTxns.reduce((s,t) => s+t.amount, 0);
+        sendNotification(`Good evening ${name || ''}! 🌙`, `You've logged ${todayTxns.length} transactions (${fmt(total)}) today. Keep it up!`);
+      }
+      localStorage.setItem(LAST_DAILY_KEY, new Date().toDateString());
+      setTimeout(scheduleNotifications, 86400000);
+    }, ms);
+  }
+
+  // Weekly Summary on Sunday at 10AM
+  if (isNotifEnabled('weekly')) {
+    const isSunday = now.getDay() === 0;
+    const thisWeekStr = `week-${now.getFullYear()}-${getWeekNumber(now)}`;
+    const lastWeekly = localStorage.getItem(LAST_WEEKLY_KEY);
+    if (isSunday && lastWeekly !== thisWeekStr) {
+      const tenAM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0);
+      let ms = tenAM - now;
+      if (ms < 0) ms = 1000;
+      setTimeout(() => {
+        const txns = loadTxns();
+        const weekStart = new Date(now.getTime() - 7 * 86400000);
+        const prevWeekStart = new Date(now.getTime() - 14 * 86400000);
+
+        const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
+        const prevWeekTxns = txns.filter(t => {
+          const d = new Date(t.date);
+          return d >= prevWeekStart && d < weekStart;
+        });
+
+        const weekTotal = weekTxns.reduce((s,t) => s+t.amount, 0);
+        const prevTotal = prevWeekTxns.reduce((s,t) => s+t.amount, 0);
+
+        if (weekTxns.length > 0) {
+          // Find top category
+          const catTotals = {};
+          weekTxns.forEach(t => { catTotals[t.category] = (catTotals[t.category]||0) + t.amount; });
+          const topCat = Object.entries(catTotals).sort((a,b) => b[1]-a[1])[0];
+          const topMeta = getCatMeta(topCat[0]);
+
+          // Compare with last week
+          let compText = '';
+          if (prevTotal > 0) {
+            const diff = weekTotal - prevTotal;
+            if (diff < 0) compText = ` ${fmt(Math.abs(diff))} less than last week! 🎉`;
+            else if (diff > 0) compText = ` ${fmt(diff)} more than last week.`;
+            else compText = ' Same as last week.';
+          }
+
+          const body = `Spent ${fmt(weekTotal)} this week. Top: ${topMeta.icon} ${topCat[0]} ${fmt(topCat[1])}.${compText}`;
+          sendNotification('📊 Your Weekly Summary', body);
+          localStorage.setItem(LAST_WEEKLY_KEY, thisWeekStr);
+        }
+      }, ms);
+    }
+  }
+}
+
+function getWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function checkDailyLimit(todayTotal) {
+  const limit = loadDailyLimit();
+  if (!limit) return;
+  if (todayTotal > limit) {
+    const over = todayTotal - limit;
+    showToast(`🔔 Daily limit exceeded by ${fmt(over)}!`);
+    if (isNotifEnabled('dailylimit')) {
+      sendNotification('⚠️ Daily Limit Exceeded!', `You've spent ${fmt(todayTotal)} today. Over by ${fmt(over)}.`);
+    }
+  } else {
+    const pct = Math.round((todayTotal / limit) * 100);
+    if (pct >= 80) {
+      const remaining = limit - todayTotal;
+      showToast(`⚠️ ${pct}% of daily limit used. ${fmt(remaining)} left!`);
+      if (isNotifEnabled('dailylimit')) {
+        sendNotification('⚠️ Daily Limit Warning', `${pct}% of daily limit used. Only ${fmt(remaining)} remaining.`);
+      }
+    }
+  }
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    showToast('Notifications not supported on this device');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    showToast('Notifications blocked. Enable in browser settings.');
+    return false;
+  }
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+async function toggleNotifications() {
+  const enabled = loadNotifEnabled();
+  if (!enabled) {
+    const granted = await requestNotifPermission();
+    if (!granted) {
+      document.getElementById('notif-perm-toggle').classList.remove('on');
+      return;
+    }
+    localStorage.setItem(NOTIF_KEY, '1');
+    document.getElementById('notif-perm-toggle').classList.add('on');
+    document.getElementById('notif-perm-sub').textContent = 'Daily reminders at 9PM + weekly summary on Sunday';
+    showToast('Notifications enabled! 🔔');
+    new Notification('SpendSmart 💰', {
+      body: "You're all set! We'll remind you daily at 9PM to log your expenses.",
+      icon: 'icon-192.png',
+    });
+    scheduleNotifications();
+  } else {
+    localStorage.setItem(NOTIF_KEY, '0');
+    document.getElementById('notif-perm-toggle').classList.remove('on');
+    document.getElementById('notif-perm-sub').textContent = 'Enable daily reminders & weekly summary';
+    showToast('Notifications disabled');
+  }
+}
+
+function sendNotification(title, body) {
+  if (!loadNotifEnabled()) return;
+  if (Notification.permission !== 'granted') return;
+  new Notification(title, {
+    body,
+    icon: 'icon-192.png',
+    badge: 'icon-96.png',
+  });
+}
+
+function scheduleNotifications() {
+  if (!loadNotifEnabled()) return;
+  if (Notification.permission !== 'granted') return;
+
+  const now = new Date();
+
+  // ── Daily Reminder at 9PM ──
+  const lastDaily = localStorage.getItem(LAST_DAILY_KEY);
+  const todayStr = now.toDateString();
+
+  if (lastDaily !== todayStr) {
+    const ninepm = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0, 0);
+    let msUntil9pm = ninepm - now;
+    if (msUntil9pm < 0) msUntil9pm += 86400000; // already past 9PM → schedule for tomorrow
+
+    setTimeout(() => {
+      // Check if user already logged today
+      const txns = loadTxns();
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayTxns = txns.filter(t => new Date(t.date) >= todayStart);
+
+      const name = loadUsername();
+      if (todayTxns.length === 0) {
+        sendNotification(
+          `Hey ${name || 'there'}! 👋`,
+          "Don't forget to log today's expenses. Tap to open SpendSmart!"
+        );
+      } else {
+        const todayTotal = todayTxns.reduce((s, t) => s + t.amount, 0);
+        sendNotification(
+          `Good evening ${name || ''}! 🌙`,
+          `You've logged ${todayTxns.length} transactions (${fmt(todayTotal)}) today. Keep it up!`
+        );
+      }
+      localStorage.setItem(LAST_DAILY_KEY, new Date().toDateString());
+      // Reschedule for next day
+      setTimeout(scheduleNotifications, 86400000);
+    }, msUntil9pm);
+  }
+
+  // ── Weekly Summary every Sunday ──
+  const lastWeekly = localStorage.getItem(LAST_WEEKLY_KEY);
+  const isSunday = now.getDay() === 0;
+  const thisWeekStr = `week-${now.getFullYear()}-${getWeekNumber(now)}`;
+
+  if (isSunday && lastWeekly !== thisWeekStr) {
+    // Fire weekly summary at 10AM on Sunday
+    const tenAM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0);
+    let msUntil10am = tenAM - now;
+    if (msUntil10am < 0) msUntil10am = 1000; // already past 10AM today → fire in 1 sec
+
+    setTimeout(() => {
+      const txns = loadTxns();
+      const weekStart = new Date(now.getTime() - 7 * 86400000);
+      const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
+      const weekTotal = weekTxns.reduce((s, t) => s + t.amount, 0);
+
+      if (weekTxns.length > 0) {
+        sendNotification(
+          '📊 Your Weekly Summary',
+          `You spent ${fmt(weekTotal)} across ${weekTxns.length} transactions this week. Tap to see details!`
+        );
+        localStorage.setItem(LAST_WEEKLY_KEY, thisWeekStr);
+      }
+    }, msUntil10am);
+  }
+}
+
+function getWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function checkDailyLimit(todayTotal) {
+  const limit = loadDailyLimit();
+  if (!limit) return;
+  if (todayTotal > limit) {
+    const over = todayTotal - limit;
+    showToast(`🔔 Daily limit exceeded by ${fmt(over)}!`);
+  } else {
+    const pct = Math.round((todayTotal / limit) * 100);
+    if (pct >= 80) {
+      const remaining = limit - todayTotal;
+      showToast(`⚠️ ${pct}% of daily limit used. ${fmt(remaining)} left!`);
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+//  MONTH vs MONTH COMPARISON
+// ══════════════════════════════════════════
+function renderComparison(thisMonthTotal) {
+  const txns = loadTxns();
+  const now = new Date();
+
+  // Last month
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthTxns = txns.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
+  });
+  const lastMonthTotal = lastMonthTxns.reduce((s, t) => s + t.amount, 0);
+
+  const el = document.getElementById('compare-section');
+  if (lastMonthTotal === 0) { el.style.display = 'none'; return; }
+
+  const maxVal = Math.max(thisMonthTotal, lastMonthTotal);
+  const thisPct = maxVal > 0 ? Math.round((thisMonthTotal / maxVal) * 100) : 0;
+  const lastPct = maxVal > 0 ? Math.round((lastMonthTotal / maxVal) * 100) : 0;
+
+  const diff = thisMonthTotal - lastMonthTotal;
+  const diffPct = lastMonthTotal > 0 ? Math.abs(Math.round((diff / lastMonthTotal) * 100)) : 0;
+
+  let diffCls, diffMsg;
+  if (diff > 0) {
+    diffCls = 'up';
+    diffMsg = `📈 Spent ${fmt(Math.abs(diff))} (${diffPct}%) MORE than last month`;
+  } else if (diff < 0) {
+    diffCls = 'down';
+    diffMsg = `📉 Spent ${fmt(Math.abs(diff))} (${diffPct}%) LESS than last month — Great job!`;
+  } else {
+    diffCls = 'same';
+    diffMsg = `Same spending as last month`;
+  }
+
+  const thisMonthName = now.toLocaleDateString('en-IN', { month: 'short' });
+  const lastMonthName = lastMonth.toLocaleDateString('en-IN', { month: 'short' });
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="compare-card">
+      <div class="compare-title">📊 Month vs Month</div>
+      <div class="compare-row">
+        <div class="compare-month">${thisMonthName}</div>
+        <div class="compare-bar-wrap">
+          <div class="compare-bar-fill" style="width:${thisPct}%;background:#0F6E56">
+            <span class="compare-bar-amt">${fmt(thisMonthTotal)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-month">${lastMonthName}</div>
+        <div class="compare-bar-wrap">
+          <div class="compare-bar-fill" style="width:${lastPct}%;background:#888780">
+            <span class="compare-bar-amt">${fmt(lastMonthTotal)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="compare-diff ${diffCls}">${diffMsg}</div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+//  SETTINGS — load saved values
+// ══════════════════════════════════════════
+function loadSettingsValues() {
+  updateNotifSummary();
+  updateBudgetSummary();
 }
 
 // ══════════════════════════════════════════
@@ -1107,6 +2410,17 @@ function renderCharts() {
 // ══════════════════════════════════════════
 function toggleNotif() {
   showToast('Auto UPI tracking works after Android app install');
+}
+
+function rateApp() {
+  // Replace with your Play Store URL after publishing
+  // e.g. 'https://play.google.com/store/apps/details?id=com.yourname.spendsmart'
+  const PLAY_STORE_URL = '';
+  if (PLAY_STORE_URL) {
+    window.open(PLAY_STORE_URL, '_blank');
+  } else {
+    showToast('Coming soon on Play Store! 🚀');
+  }
 }
 
 function exportCSV() {
@@ -1120,7 +2434,7 @@ function exportCSV() {
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'paisatrack_expenses.csv';
+  a.href = url; a.download = 'spendsmart_expenses.csv';
   a.click(); URL.revokeObjectURL(url);
   showToast('CSV downloaded! 📊');
 }
@@ -1136,16 +2450,42 @@ function clearAllData() {
 //  INIT
 // ══════════════════════════════════════════
 seedIfEmpty();
-renderHome();
+// Small delay to ensure localStorage is fully written before rendering
+setTimeout(() => {
+  renderHome();
+  checkOnboarding();
+  updateNotifSummary();
+  updateBudgetSummary();
+  if (anyNotifEnabled() && Notification.permission === 'granted') {
+    scheduleNotifications();
+  }
+}, 50);
 
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('PaisaTrack SW registered'))
+      .then(() => console.log('SpendSmart SW registered'))
       .catch(err => console.log('SW error:', err));
   });
 }
+
+// ══════════════════════════════════════════
+//  ANDROID BACK BUTTON
+// ══════════════════════════════════════════
+window.addEventListener('popstate', function(e) {
+  // Check which sub-screen is open and go back
+  const subScreens = ['screen-notif', 'screen-budget', 'screen-profile', 'screen-add'];
+  const openSub = subScreens.find(s => document.getElementById(s).classList.contains('active'));
+
+  if (openSub === 'screen-notif') { closeNotifPage(); history.pushState(null, '', window.location.href); return; }
+  if (openSub === 'screen-budget') { closeBudgetPage(); history.pushState(null, '', window.location.href); return; }
+  if (openSub === 'screen-profile') { closeProfilePage(); history.pushState(null, '', window.location.href); return; }
+  if (openSub === 'screen-add') { closeAddExpense(); history.pushState(null, '', window.location.href); return; }
+});
+
+// Push initial state so popstate fires on first back press
+history.pushState(null, '', window.location.href);
 </script>
 </body>
 </html>
