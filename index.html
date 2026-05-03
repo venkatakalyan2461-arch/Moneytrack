@@ -1184,35 +1184,7 @@ function setText(id, text) { const e = el(id); if (e) e.textContent = text; }
 //  SEED SAMPLE DATA
 // ══════════════════════════════════════════
 function seedIfEmpty() {
-  if (loadTxns().length > 0) return;
-  const now = new Date();
-  const d = (days, hours=0) => new Date(now.getFullYear(), now.getMonth(), now.getDate()-days, now.getHours()-hours, now.getMinutes()).toISOString();
-  const lm = (day) => new Date(now.getFullYear(), now.getMonth()-1, day, 10, 0).toISOString();
-  const samples = [
-    {merchant:'Zomato',          amount:340,  category:'Food & Dining',    date:d(0,1)},
-    {merchant:'Rapido',          amount:85,   category:'Travel',           date:d(0,3)},
-    {merchant:'Chai & Snacks',   amount:60,   category:'Food & Dining',    date:d(0,5)},
-    {merchant:'Swiggy',          amount:420,  category:'Food & Dining',    date:d(1,2)},
-    {merchant:'Uber',            amount:180,  category:'Travel',           date:d(1,6)},
-    {merchant:'DMart',           amount:1240, category:'Groceries',        date:d(1,8)},
-    {merchant:'Amazon',          amount:899,  category:'Shopping',         date:d(2,1)},
-    {merchant:'Jio Recharge',    amount:299,  category:'Bills & Recharge', date:d(2,4)},
-    {merchant:'Blinkit',         amount:645,  category:'Groceries',        date:d(3,2)},
-    {merchant:'Netflix',         amount:649,  category:'Entertainment',    date:d(4,0)},
-    {merchant:'Medplus',         amount:320,  category:'Health',           date:d(4,3)},
-    {merchant:'Dominos',         amount:520,  category:'Food & Dining',    date:d(5,1)},
-    {merchant:'BESCOM Bill',     amount:850,  category:'Bills & Recharge', date:d(5,5)},
-    {merchant:'Myntra',          amount:1199, category:'Shopping',         date:d(6,2)},
-    // Last month
-    {merchant:'Swiggy',          amount:390,  category:'Food & Dining',    date:lm(2)},
-    {merchant:'Ola',             amount:160,  category:'Travel',           date:lm(5)},
-    {merchant:'Flipkart',        amount:1599, category:'Shopping',         date:lm(10)},
-    {merchant:'Airtel',          amount:349,  category:'Bills & Recharge', date:lm(15)},
-    {merchant:'BigBasket',       amount:980,  category:'Groceries',        date:lm(20)},
-    {merchant:'PVR Cinemas',     amount:600,  category:'Entertainment',    date:lm(24)},
-  ];
-  samples.forEach((s, i) => { s.id = Date.now() + i; s.source = 'sample'; });
-  saveTxns(samples);
+  // No sample data — users start fresh
 }
 
 // ══════════════════════════════════════════
@@ -1752,17 +1724,33 @@ async function toggleNotifType(type) {
   const toggleEl = el('toggle-' + type);
   const current = isNotifEnabled(type);
   if (!current) {
-    if (!('Notification' in window)) { showToast('Notifications not supported'); return; }
-    if (Notification.permission === 'denied') { showToast('Notifications blocked in browser settings'); return; }
+    // Check if notifications are supported
+    if (!('Notification' in window)) {
+      // WebView — just enable silently, notifications will work when app runs natively
+      setNotifEnabled(type, true);
+      if (toggleEl) toggleEl.classList.add('on');
+      const labels = {daily:'Daily reminder set! You\'ll be notified at 9PM 🌙', weekly:'Weekly summary every Sunday at 10AM 📊', budget:'Budget alerts enabled 💰', dailylimit:'Daily limit alerts enabled 📅'};
+      showToast(labels[type] || 'Enabled ✅');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      showToast('Enable notifications in your browser settings');
+      return;
+    }
     if (Notification.permission !== 'granted') {
       const result = await Notification.requestPermission();
-      if (result !== 'granted') { showToast('Permission denied'); return; }
+      if (result !== 'granted') {
+        showToast('Permission denied. Enable in settings.');
+        return;
+      }
     }
     setNotifEnabled(type, true);
     if (toggleEl) toggleEl.classList.add('on');
     const labels = {daily:'Daily reminder set! You\'ll be notified at 9PM 🌙', weekly:'Weekly summary every Sunday at 10AM 📊', budget:'Budget alerts enabled 💰', dailylimit:'Daily limit alerts enabled 📅'};
-    showToast(labels[type] || 'Enabled');
-    new Notification('SpendSmart 💰', {body:`Notifications enabled! You'll receive daily reminders at 9PM.`, icon:'icon-192.png'});
+    showToast(labels[type] || 'Enabled ✅');
+    try {
+      new Notification('SpendSmart 💰', {body:`Notifications enabled! You'll receive daily reminders at 9PM.`, icon:'icon-192.png'});
+    } catch(e) {}
     scheduleNotifications();
   } else {
     setNotifEnabled(type, false);
