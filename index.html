@@ -6,7 +6,7 @@
 <title>SpendSmart - Track Expense & Budget</title>
 
 <!-- PWA -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -875,7 +875,7 @@
           </div>
           <span class="settings-arrow">›</span>
         </div>
-        <div class="settings-row" onclick="window.open('privacy_policy.html','_blank')" style="cursor:pointer;">
+        <div class="settings-row" onclick="openPrivacyPolicy()" style="cursor:pointer;">
           <div class="settings-icon">🔒</div>
           <div class="settings-info">
             <div class="settings-label">Privacy Policy</div>
@@ -1653,18 +1653,40 @@ function saveDailyLimit() {
   showToast('Daily limit set to ' + fmt(val) + ' 📅');
   renderHome();
 }
+function openPrivacyPolicy() {
+  window.location.href = 'https://venkatakalyan2461-arch.github.io/Moneytrack/privacy_policy.html';
+}
+
 function exportCSV() {
   const txns = loadTxns();
   if (txns.length === 0) { showToast('No transactions to export'); return; }
   const header = 'Date,Merchant,Category,Amount,Note';
   const rows = txns.map(t => `${new Date(t.date).toLocaleDateString('en-IN')},${t.merchant},${t.category},${t.amount},${t.note||''}`);
   const csv = [header, ...rows].join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'spendsmart_expenses.csv'; a.click();
-  URL.revokeObjectURL(url);
-  showToast('CSV downloaded! 📊');
+  try {
+    // Method 1 — Blob download
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'spendsmart_expenses.csv';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    showToast('CSV downloaded! 📊');
+  } catch(e) {
+    // Method 2 — Data URI fallback for WebView
+    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    const a = document.createElement('a');
+    a.href = dataUri;
+    a.download = 'spendsmart_expenses.csv';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('CSV downloaded! 📊');
+  }
 }
 function clearAllData() {
   if (!confirm('Delete ALL transactions? Cannot be undone.')) return;
