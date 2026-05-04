@@ -848,8 +848,8 @@
         <div class="settings-row" onclick="exportCSV()">
           <div class="settings-icon">📊</div>
           <div class="settings-info">
-            <div class="settings-label">Export to CSV</div>
-            <div class="settings-sub">Download all transactions as spreadsheet</div>
+            <div class="settings-label">Export to Excel</div>
+            <div class="settings-sub">Download all transactions as Excel file</div>
           </div>
           <span class="settings-arrow">›</span>
         </div>
@@ -887,7 +887,7 @@
           </div>
           <span class="settings-arrow">›</span>
         </div>
-        <div class="settings-row" onclick="openPrivacyPolicy()" style="cursor:pointer;">
+        <div class="settings-row" onclick="openPrivacyPage()" style="cursor:pointer;">
           <div class="settings-icon">🔒</div>
           <div class="settings-info">
             <div class="settings-label">Privacy Policy</div>
@@ -914,7 +914,7 @@
   <!-- ═══════════════ NOTIFICATIONS SCREEN ═══════════════ -->
   <div class="screen" id="screen-notif">
     <div class="appbar" style="padding-bottom:12px;">
-      <button class="appbar-back" onclick="closeNotifPage()">←</button>
+      <button class="appbar-back" onclick="closeNotifPage()">onclick="closeNotifPage()">←#8592;</button>
       <span class="appbar-title">Notifications</span>
     </div>
 
@@ -965,7 +965,7 @@
   <!-- ═══════════════ PROFILE SCREEN ═══════════════ -->
   <div class="screen" id="screen-profile">
     <div class="appbar" style="padding-bottom:12px;">
-      <button class="appbar-back" onclick="closeProfilePage()">←</button>
+      <button class="appbar-back" onclick="closeProfilePage()">onclick="closeProfilePage()">←#8592;</button>
       <span class="appbar-title">My Profile</span>
     </div>
     <div class="scroll-body">
@@ -992,7 +992,7 @@
   <!-- ═══════════════ BUDGET SCREEN ═══════════════ -->
   <div class="screen" id="screen-budget">
     <div class="appbar" style="padding-bottom:12px;">
-      <button class="appbar-back" onclick="closeBudgetPage()">←</button>
+      <button class="appbar-back" onclick="closeBudgetPage()">onclick="closeBudgetPage()">←#8592;</button>
       <span class="appbar-title">Budget & Limits</span>
     </div>
 
@@ -1061,6 +1061,55 @@
         <span class="action-btn-label">Delete Expense</span>
       </button>
       <button class="action-cancel" onclick="closeActionSheet()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PRIVACY POLICY SCREEN ═══════════════ -->
+  <div class="screen" id="screen-privacy">
+    <div class="appbar" style="padding-bottom:12px;">
+      <button class="appbar-back" onclick="closePrivacyPage()">onclick="closePrivacyPage()">←#8592;</button>
+      <span class="appbar-title">Privacy Policy</span>
+    </div>
+    <div class="scroll-body" style="padding:16px;">
+
+      <div class="settings-card" style="margin:0 0 12px;padding:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:24px;">🔒</span>
+          <div>
+            <div style="font-size:14px;font-weight:800;color:#2C2C2A;">100% Private</div>
+            <div style="font-size:12px;color:#0F6E56;">Your data never leaves your device</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card" style="margin:0 0 12px;padding:16px;">
+        <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">What We Store</div>
+        <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">SpendSmart stores your expense data, budget settings, and preferences locally on your device only. All data remains on your phone at all times.</div>
+      </div>
+
+      <div class="settings-card" style="margin:0 0 12px;padding:16px;">
+        <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">What We Don't Collect</div>
+        <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">We do not collect your name, email, phone number, bank details, or UPI credentials. We do not track your location. We do not share data with third parties. We do not display advertisements.</div>
+      </div>
+
+      <div class="settings-card" style="margin:0 0 12px;padding:16px;">
+        <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">Notifications</div>
+        <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">Notifications are generated locally on your device. No data is sent to any server for notifications.</div>
+      </div>
+
+      <div class="settings-card" style="margin:0 0 12px;padding:16px;">
+        <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">Data Deletion</div>
+        <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">You can delete all data anytime via Settings → Data → Clear All Data. Uninstalling the app also removes all data permanently.</div>
+      </div>
+
+      <div class="settings-card" style="margin:0 0 12px;padding:16px;">
+        <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">Contact</div>
+        <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">For questions about this privacy policy, please contact us via the email listed on our Play Store page.</div>
+      </div>
+
+      <div style="text-align:center;font-size:12px;color:#B4B2A9;padding:16px 0;">
+        Last updated: May 2026 • SpendSmart v1.0.0
+      </div>
     </div>
   </div>
 
@@ -1680,6 +1729,14 @@ function saveDailyLimit() {
 function openPrivacyPolicy() {
   window.location.href = 'https://venkatakalyan2461-arch.github.io/Moneytrack/privacy_policy.html';
 }
+function openPrivacyPage() {
+  el('screen-settings').classList.remove('active');
+  el('screen-privacy').classList.add('active');
+}
+function closePrivacyPage() {
+  el('screen-privacy').classList.remove('active');
+  el('screen-settings').classList.add('active');
+}
 
 function exportCSV() {
   const txns = loadTxns();
@@ -1687,43 +1744,19 @@ function exportCSV() {
   const header = 'Date,Merchant,Category,Amount,Note';
   const rows = txns.map(t => `${new Date(t.date).toLocaleDateString('en-IN')},${t.merchant},${t.category},${t.amount},${t.note||''}`);
   const csv = [header, ...rows].join('\n');
-
-  // Method 1 — Web Share API (works best on Android)
-  if (navigator.share && navigator.canShare) {
-    const file = new File([csv], 'spendsmart_expenses.csv', {type:'text/csv'});
-    if (navigator.canShare({files:[file]})) {
-      navigator.share({
-        title: 'SpendSmart Expenses',
-        text: 'My expense data from SpendSmart',
-        files: [file]
-      }).then(() => showToast('Shared successfully! 📊'))
-        .catch(() => fallbackCSV(csv));
-      return;
-    }
-  }
-  fallbackCSV(csv);
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'spendsmart_expenses.csv';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  showToast('Downloaded! Check your Downloads folder 📂');
 }
 
-function fallbackCSV(csv) {
-  try {
-    // Method 2 — Blob download
-    const blob = new Blob([csv], {type:'text/csv'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'spendsmart_expenses.csv';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-    showToast('CSV downloaded! 📊');
-  } catch(e) {
-    // Method 3 — Open as data URI in new tab
-    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    window.open(dataUri, '_blank');
-    showToast('CSV opened! Save it manually 📊');
-  }
-}
+function fallbackCSV(csv) {}
 function clearAllData() {
   if (!confirm('Delete ALL transactions? Cannot be undone.')) return;
   localStorage.removeItem(STORAGE_KEY);
@@ -1904,11 +1937,12 @@ function scheduleNotifications() {
 //  ANDROID BACK BUTTON
 // ══════════════════════════════════════════
 window.addEventListener('popstate', function() {
-  const subs = ['screen-notif','screen-budget','screen-profile','screen-add'];
+  const subs = ['screen-notif','screen-budget','screen-profile','screen-privacy','screen-add'];
   const open = subs.find(s => { const e=el(s); return e && e.classList.contains('active'); });
   if (open === 'screen-notif') { closeNotifPage(); history.pushState(null,'',window.location.href); }
   else if (open === 'screen-budget') { closeBudgetPage(); history.pushState(null,'',window.location.href); }
   else if (open === 'screen-profile') { closeProfilePage(); history.pushState(null,'',window.location.href); }
+  else if (open === 'screen-privacy') { closePrivacyPage(); history.pushState(null,'',window.location.href); }
   else if (open === 'screen-add') { closeAddExpense(); history.pushState(null,'',window.location.href); }
 });
 history.pushState(null, '', window.location.href);
