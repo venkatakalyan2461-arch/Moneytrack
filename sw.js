@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spendsmart-v2';
+const CACHE_NAME = 'spendsmart-v3';
 
 const ASSETS = [
   '/Moneytrack/',
@@ -12,17 +12,25 @@ const ASSETS = [
   '/Moneytrack/icon-192.png',
   '/Moneytrack/icon-384.png',
   '/Moneytrack/icon-512.png',
+  'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
 ];
 
-// Install — cache all assets
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(cache => {
+      // Cache local assets (must succeed)
+      const localAssets = ASSETS.filter(a => a.startsWith('/'));
+      // Cache external assets (optional, ignore failures)
+      const externalAssets = ASSETS.filter(a => !a.startsWith('/'));
+      return cache.addAll(localAssets).then(() => {
+        return Promise.allSettled(externalAssets.map(url => cache.add(url)));
+      });
+    })
   );
   self.skipWaiting();
 });
 
-// Activate — clean old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -32,11 +40,23 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch — cache first, fallback to network, fallback to cached index
 self.addEventListener('fetch', event => {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
+    caches.match(event.request, {ignoreSearch: true}).then(cached => {
+      // Return cached version immediately
+      if (cached) {
+        // Update cache in background
+        fetch(event.request).then(response => {
+          if (response && response.status === 200) {
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, response));
+          }
+        }).catch(() => {});
+        return cached;
+      }
+      // Not in cache — fetch from network
       return fetch(event.request)
         .then(response => {
           if (response && response.status === 200) {
@@ -45,7 +65,10 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(() => caches.match('/Moneytrack/index.html'));
+        .catch(() => {
+          // Offline fallback
+          return caches.match('/Moneytrack/index.html');
+        });
     })
   );
 });

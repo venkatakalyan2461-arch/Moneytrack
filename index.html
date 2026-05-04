@@ -524,6 +524,18 @@
     width: calc(100% - 32px); font-size: 15px; font-weight: 700;
     font-family: 'Nunito', sans-serif; cursor: pointer; color: var(--text);
   }
+  /* ── First Time Guide ── */
+  .guide-overlay { position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 20px 110px; }
+  .guide-card { background:white;border-radius:20px;padding:24px;width:100%;max-width:380px;text-align:center; }
+  .guide-emoji { font-size:44px;margin-bottom:10px; }
+  .guide-title { font-size:17px;font-weight:800;color:#2C2C2A;margin-bottom:6px; }
+  .guide-desc { font-size:13px;color:#888780;line-height:1.6;margin-bottom:16px; }
+  .guide-dots { display:flex;justify-content:center;gap:6px;margin-bottom:16px; }
+  .guide-dot { width:8px;height:8px;border-radius:50%;background:#E8E6E0;transition:all 0.3s; }
+  .guide-dot.active { background:#0F6E56;width:20px;border-radius:4px; }
+  .guide-btn { width:100%;padding:13px;background:#0F6E56;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer; }
+  .guide-skip { margin-top:10px;background:none;border:none;color:#888780;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif;width:100%;padding:6px; }
+
   .onboard-overlay {
     position: fixed; inset: 0; z-index: 9999;
     background: #0F6E56;
@@ -1049,6 +1061,18 @@
         <span class="action-btn-label">Delete Expense</span>
       </button>
       <button class="action-cancel" onclick="closeActionSheet()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FIRST TIME GUIDE ═══════════════ -->
+  <div id="guide-overlay" style="display:none;" class="guide-overlay">
+    <div class="guide-card">
+      <div class="guide-dots" id="guide-dots"></div>
+      <div class="guide-emoji" id="guide-emoji"></div>
+      <div class="guide-title" id="guide-title"></div>
+      <div class="guide-desc" id="guide-desc"></div>
+      <button class="guide-btn" id="guide-btn" onclick="nextGuide()">Next →</button>
+      <button class="guide-skip" onclick="skipGuide()">Skip</button>
     </div>
   </div>
 
@@ -1663,8 +1687,26 @@ function exportCSV() {
   const header = 'Date,Merchant,Category,Amount,Note';
   const rows = txns.map(t => `${new Date(t.date).toLocaleDateString('en-IN')},${t.merchant},${t.category},${t.amount},${t.note||''}`);
   const csv = [header, ...rows].join('\n');
+
+  // Method 1 — Web Share API (works best on Android)
+  if (navigator.share && navigator.canShare) {
+    const file = new File([csv], 'spendsmart_expenses.csv', {type:'text/csv'});
+    if (navigator.canShare({files:[file]})) {
+      navigator.share({
+        title: 'SpendSmart Expenses',
+        text: 'My expense data from SpendSmart',
+        files: [file]
+      }).then(() => showToast('Shared successfully! 📊'))
+        .catch(() => fallbackCSV(csv));
+      return;
+    }
+  }
+  fallbackCSV(csv);
+}
+
+function fallbackCSV(csv) {
   try {
-    // Method 1 — Blob download
+    // Method 2 — Blob download
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1676,16 +1718,10 @@ function exportCSV() {
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     showToast('CSV downloaded! 📊');
   } catch(e) {
-    // Method 2 — Data URI fallback for WebView
+    // Method 3 — Open as data URI in new tab
     const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    const a = document.createElement('a');
-    a.href = dataUri;
-    a.download = 'spendsmart_expenses.csv';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast('CSV downloaded! 📊');
+    window.open(dataUri, '_blank');
+    showToast('CSV opened! Save it manually 📊');
   }
 }
 function clearAllData() {
@@ -1819,7 +1855,7 @@ function completeOnboard() {
   }
   localStorage.setItem(NAME_KEY, name);
   const overlay = el('onboard');
-  if (overlay) { overlay.classList.add('hide'); setTimeout(() => { overlay.style.display='none'; renderHome(); }, 400); }
+  if (overlay) { overlay.classList.add('hide'); setTimeout(() => { overlay.style.display='none'; renderHome(); setTimeout(showGuide, 500); }, 400); }
 }
 
 // ══════════════════════════════════════════
@@ -1876,6 +1912,58 @@ window.addEventListener('popstate', function() {
   else if (open === 'screen-add') { closeAddExpense(); history.pushState(null,'',window.location.href); }
 });
 history.pushState(null, '', window.location.href);
+
+// ══════════════════════════════════════════
+//  FIRST TIME GUIDE
+// ══════════════════════════════════════════
+const GUIDE_KEY = 'spendsmart_guide_done';
+const GUIDE_STEPS = [
+  { emoji:'➕', title:'Add Your Expenses', desc:'Tap the "+ Add Expense" button at the bottom of the home screen to log any expense manually.' },
+  { emoji:'🍔', title:'Auto Category Detection', desc:'Just type the merchant name like "Zomato" or "Rapido" — the category is automatically selected for you!' },
+  { emoji:'📊', title:'Track Your Spending', desc:'View beautiful charts and insights on the Charts tab. See where your money goes each week and month.' },
+  { emoji:'🔔', title:'Enable Reminders', desc:'Go to Settings → Notifications to enable daily reminders at 9PM and weekly spending summaries every Sunday!' },
+  { emoji:'💰', title:'Set a Budget', desc:'Go to Settings → Budget & Limits to set a monthly budget. Get alerted when you\'re close to the limit!' },
+  { emoji:'🎉', title:'You\'re All Set!', desc:'Start adding your daily expenses and take control of your spending. Happy tracking!' },
+];
+let guideStep = 0;
+
+function showGuide() {
+  if (localStorage.getItem(GUIDE_KEY)) return;
+  guideStep = 0;
+  updateGuide();
+  const overlay = el('guide-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function updateGuide() {
+  const step = GUIDE_STEPS[guideStep];
+  setText('guide-emoji', step.emoji);
+  setText('guide-title', step.title);
+  setText('guide-desc', step.desc);
+  setText('guide-btn', guideStep === GUIDE_STEPS.length - 1 ? 'Get Started! 🚀' : 'Next →');
+  // Dots
+  const dotsEl = el('guide-dots');
+  if (dotsEl) {
+    dotsEl.innerHTML = GUIDE_STEPS.map((_, i) =>
+      `<div class="guide-dot ${i === guideStep ? 'active' : ''}"></div>`
+    ).join('');
+  }
+}
+
+function nextGuide() {
+  if (guideStep < GUIDE_STEPS.length - 1) {
+    guideStep++;
+    updateGuide();
+  } else {
+    skipGuide();
+  }
+}
+
+function skipGuide() {
+  localStorage.setItem(GUIDE_KEY, '1');
+  const overlay = el('guide-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
 
 // ══════════════════════════════════════════
 //  INIT
