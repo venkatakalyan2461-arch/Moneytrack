@@ -28,10 +28,8 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install tools
-        run: |
-          npm install -g @bubblewrap/cli
-          sudo apt-get install -y expect
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
 
       - name: Generate keystore
         run: |
@@ -45,144 +43,66 @@ jobs:
             -keypass spendsmart123 \
             -dname "CN=SpendSmart, OU=App, O=SpendSmart, L=Hyderabad, S=Telangana, C=IN"
 
-      - name: Init Bubblewrap project
+      - name: Create TWA manifest manually
         run: |
           mkdir -p twa-app
-          JAVA_PATH="${JAVA_HOME}"
-          ANDROID_PATH="${ANDROID_SDK_ROOT}"
-
-          # Write expect script to file for better handling
-          cat > /tmp/bubblewrap_init.exp << EXPECT_SCRIPT
-          #!/usr/bin/expect -f
-          set timeout 300
-          log_user 1
-
-          spawn bubblewrap init --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json --directory=./twa-app
-
-          expect {
-            "Do you want Bubblewrap to install the JDK" {
-              send "n\r"
-              exp_continue
-            }
-            "Path to your existing JDK 17" {
-              send "$JAVA_PATH\r"
-              exp_continue
-            }
-            "Do you want Bubblewrap to install the Android SDK" {
-              send "n\r"
-              exp_continue
-            }
-            "Path to your existing Android SDK" {
-              send "$ANDROID_PATH\r"
-              exp_continue
-            }
-            "Domain" {
-              send "venkatakalyan2461-arch.github.io\r"
-              exp_continue
-            }
-            "URL path" {
-              send "/Moneytrack/\r"
-              exp_continue
-            }
-            "Application name" {
-              send "SpendSmart\r"
-              exp_continue
-            }
-            "short name" {
-              send "SpendSmart\r"
-              exp_continue
-            }
-            "launcher name" {
-              send "SpendSmart\r"
-              exp_continue
-            }
-            "display" {
-              send "\r"
-              exp_continue
-            }
-            "heme color" {
-              send "#1A3C6E\r"
-              exp_continue
-            }
-            "ackground color" {
-              send "#1A3C6E\r"
-              exp_continue
-            }
-            "splash" {
-              send "#1A3C6E\r"
-              exp_continue
-            }
-            "igning key" {
-              send "./android.keystore\r"
-              exp_continue
-            }
-            "ey alias" {
-              send "spendsmart\r"
-              exp_continue
-            }
-            "ey password" {
-              send "spendsmart123\r"
-              exp_continue
-            }
-            "tore password" {
-              send "spendsmart123\r"
-              exp_continue
-            }
-            "ersion code" {
-              send "1\r"
-              exp_continue
-            }
-            "ersion name" {
-              send "1.0.0\r"
-              exp_continue
-            }
-            "package" {
-              send "com.spendsmart.app\r"
-              exp_continue
-            }
-            "(Y/n)" {
-              send "\r"
-              exp_continue
-            }
-            "(y/N)" {
-              send "\r"
-              exp_continue
-            }
-            eof {
-              puts "Done!"
-            }
+          cp android.keystore twa-app/android.keystore
+          
+          cat > twa-app/twa-manifest.json << 'EOF'
+          {
+            "packageId": "com.spendsmart.app",
+            "host": "venkatakalyan2461-arch.github.io",
+            "name": "SpendSmart",
+            "launcherName": "SpendSmart",
+            "display": "standalone",
+            "themeColor": "#1A3C6E",
+            "navigationColor": "#1A3C6E",
+            "navigationColorDark": "#1A3C6E",
+            "navigationDividerColor": "#1A3C6E",
+            "navigationDividerColorDark": "#1A3C6E",
+            "backgroundColor": "#1A3C6E",
+            "enableNotifications": true,
+            "startUrl": "/Moneytrack/",
+            "iconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
+            "maskableIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
+            "monochromeIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
+            "shortcuts": [],
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "spendsmart"
+            },
+            "appVersionName": "1.0.0",
+            "appVersionCode": 1,
+            "minSdkVersion": 19,
+            "orientation": "portrait",
+            "fingerprints": [],
+            "additionalTrustedOrigins": [],
+            "retainedBundles": [],
+            "webManifestUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json",
+            "generatorApp": "bubblewrap-cli",
+            "sdkDir": "/usr/local/lib/android/sdk",
+            "jdkDir": "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64"
           }
-          EXPECT_SCRIPT
+          EOF
+          
+          echo "=== twa-manifest.json created ==="
+          cat twa-app/twa-manifest.json
 
-          chmod +x /tmp/bubblewrap_init.exp
-          expect /tmp/bubblewrap_init.exp
+      - name: Generate TWA project from manifest
+        working-directory: twa-app
+        run: |
+          bubblewrap update
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
-      - name: Check twa-app contents
-        run: |
-          echo "=== twa-app contents ==="
-          ls -la twa-app/
-          echo "=== manifest ==="
-          cat twa-app/twa-manifest.json 2>/dev/null || echo "No manifest yet"
-
-      - name: Copy keystore and update config
-        run: |
-          cp android.keystore twa-app/android.keystore
-          python3 << 'PYEOF'
-          import json
-          with open('twa-app/twa-manifest.json') as f:
-              data = json.load(f)
-          data['signingKey'] = {'path': './android.keystore', 'alias': 'spendsmart'}
-          data['packageId'] = 'com.spendsmart.app'
-          with open('twa-app/twa-manifest.json', 'w') as f:
-              json.dump(data, f, indent=2)
-          print('Config updated successfully')
-          PYEOF
-
       - name: Build APK and AAB
         working-directory: twa-app
-        run: bubblewrap build
+        run: |
+          bubblewrap build \
+            --signingKeyPath=./android.keystore \
+            --signingKeyAlias=spendsmart \
+            --signingKeyPassword=spendsmart123 \
+            --signingStorePassword=spendsmart123
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
