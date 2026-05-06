@@ -1,57 +1,109 @@
 name: Build TWA APK
-
+ 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
+ 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+ 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Java
+ 
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
+ 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-
+          node-version: '20'
+ 
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
-
-      - name: Init TWA
+ 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+ 
+      - name: Create Bubblewrap config
+        run: |
+          mkdir -p twa-app
+          cat > twa-app/twa-manifest.json << 'EOF'
+          {
+            "packageId": "com.spendsmart.app",
+            "host": "venkatakalyan2461-arch.github.io",
+            "name": "SpendSmart",
+            "launcherName": "SpendSmart",
+            "display": "standalone",
+            "themeColor": "#1A3C6E",
+            "navigationColor": "#1A3C6E",
+            "navigationColorDark": "#1A3C6E",
+            "navigationDividerColor": "#1A3C6E",
+            "navigationDividerColorDark": "#1A3C6E",
+            "backgroundColor": "#1A3C6E",
+            "enableNotifications": true,
+            "startUrl": "/Moneytrack/",
+            "iconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
+            "maskableIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
+            "monochromeIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
+            "shortcuts": [],
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "spendsmart"
+            },
+            "appVersionName": "1.0.0",
+            "appVersionCode": 1,
+            "minSdkVersion": 19,
+            "orientation": "portrait",
+            "fingerprints": [],
+            "additionalTrustedOrigins": [],
+            "retainedBundles": [],
+            "webManifestUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json",
+            "generatorApp": "bubblewrap-cli",
+            "sdkDir": "$ANDROID_SDK_ROOT"
+          }
+          EOF
+ 
+      - name: Generate keystore
+        run: |
+          keytool -genkey -v \
+            -keystore twa-app/android.keystore \
+            -alias spendsmart \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass spendsmart123 \
+            -keypass spendsmart123 \
+            -dname "CN=SpendSmart, OU=App, O=SpendSmart, L=Hyderabad, S=Telangana, C=IN"
+ 
+      - name: Init Bubblewrap project
+        working-directory: twa-app
         run: |
           bubblewrap init \
             --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json \
-            --directory=./twa-app \
-            --packageId=com.spendsmart.app \
-            --name=SpendSmart \
-            --launcherName=SpendSmart \
-            --display=standalone \
-            --themeColor=#1A3C6E \
-            --backgroundColor=#1A3C6E \
-            --startUrl=/Moneytrack/ \
-            --iconUrl=https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png \
-            --maskableIconUrl=https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png \
-            --signingKeyPath=./android.keystore \
-            --signingKeyAlias=spendsmart \
-            --signingKeyPassword=spendsmart123 \
-            --signingKeyStorePassword=spendsmart123
-
-      - name: Build APK
-        working-directory: ./twa-app
-        run: bubblewrap build
-
-      - name: Upload APK & AAB
+            --skipPwaValidation
+        env:
+          BUBBLEWRAP_DISABLE_TELEMETRY: true
+          CI: true
+ 
+      - name: Build APK and AAB
+        working-directory: twa-app
+        run: |
+          bubblewrap build --skipPwaValidation
+        env:
+          BUBBLEWRAP_DISABLE_TELEMETRY: true
+ 
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: spendsmart-apk
+          name: spendsmart-build
           path: |
-            ./twa-app/*.apk
-            ./twa-app/*.aab
+            twa-app/app-release-signed.apk
+            twa-app/app-release-bundle.aab
+            twa-app/android.keystore
