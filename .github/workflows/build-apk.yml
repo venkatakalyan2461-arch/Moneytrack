@@ -25,55 +25,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Create Bubblewrap config
-        run: |
-          mkdir -p twa-app
-          cat > twa-app/twa-manifest.json << 'EOF'
-          {
-            "packageId": "com.spendsmart.app",
-            "host": "venkatakalyan2461-arch.github.io",
-            "name": "SpendSmart",
-            "launcherName": "SpendSmart",
-            "display": "standalone",
-            "themeColor": "#1A3C6E",
-            "navigationColor": "#1A3C6E",
-            "navigationColorDark": "#1A3C6E",
-            "navigationDividerColor": "#1A3C6E",
-            "navigationDividerColorDark": "#1A3C6E",
-            "backgroundColor": "#1A3C6E",
-            "enableNotifications": true,
-            "startUrl": "/Moneytrack/",
-            "iconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
-            "maskableIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
-            "monochromeIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
-            "shortcuts": [],
-            "signingKey": {
-              "path": "./android.keystore",
-              "alias": "spendsmart"
-            },
-            "appVersionName": "1.0.0",
-            "appVersionCode": 1,
-            "minSdkVersion": 19,
-            "orientation": "portrait",
-            "fingerprints": [],
-            "additionalTrustedOrigins": [],
-            "retainedBundles": [],
-            "webManifestUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json",
-            "generatorApp": "bubblewrap-cli",
-            "sdkDir": "$ANDROID_SDK_ROOT"
-          }
-          EOF
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
 
       - name: Generate keystore
         run: |
           keytool -genkey -v \
-            -keystore twa-app/android.keystore \
+            -keystore android.keystore \
             -alias spendsmart \
             -keyalg RSA \
             -keysize 2048 \
@@ -83,19 +44,38 @@ jobs:
             -dname "CN=SpendSmart, OU=App, O=SpendSmart, L=Hyderabad, S=Telangana, C=IN"
 
       - name: Init Bubblewrap project
-        working-directory: twa-app
         run: |
-          bubblewrap init \
+          echo "n" | bubblewrap init \
             --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json \
-            --skipPwaValidation
+            --directory=./twa-app
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
-          CI: true
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+
+      - name: Copy keystore
+        run: cp android.keystore twa-app/android.keystore
+
+      - name: Update signing config
+        working-directory: twa-app
+        run: |
+          cat twa-manifest.json | \
+          python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          data['signingKey'] = {'path': './android.keystore', 'alias': 'spendsmart'}
+          data['packageId'] = 'com.spendsmart.app'
+          print(json.dumps(data, indent=2))
+          " > twa-manifest-new.json
+          mv twa-manifest-new.json twa-manifest.json
 
       - name: Build APK and AAB
         working-directory: twa-app
         run: |
-          bubblewrap build --skipPwaValidation
+          bubblewrap build \
+            --signingKeyPath=./android.keystore \
+            --signingKeyAlias=spendsmart \
+            --signingKeyPassword=spendsmart123 \
+            --signingStorePassword=spendsmart123
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
@@ -106,4 +86,4 @@ jobs:
           path: |
             twa-app/app-release-signed.apk
             twa-app/app-release-bundle.aab
-            twa-app/android.keystore
+            android.keystore
