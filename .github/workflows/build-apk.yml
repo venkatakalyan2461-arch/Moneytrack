@@ -100,7 +100,17 @@ jobs:
 
       - name: Generate Android project
         working-directory: twa-app
-        run: bubblewrap update
+        run: |
+          sudo apt-get install -y expect -q
+          expect << 'EOF'
+          set timeout 60
+          spawn bubblewrap update
+          expect "versionName"
+          send "1.0.0\r"
+          expect "versionCode"
+          send "1\r"
+          expect eof
+          EOF
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
