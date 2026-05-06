@@ -117,11 +117,15 @@ jobs:
       - name: Build APK and AAB
         working-directory: twa-app
         run: |
-          bubblewrap build \
-            --signingKeyPath=./android.keystore \
-            --signingKeyAlias=spendsmart \
-            --signingKeyPassword=spendsmart123 \
-            --signingStorePassword=spendsmart123
+          expect << 'EOF'
+          set timeout 300
+          spawn bubblewrap build
+          expect "Password for the Key Store"
+          send "spendsmart123\r"
+          expect "Password for the Key"
+          send "spendsmart123\r"
+          expect eof
+          EOF
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
