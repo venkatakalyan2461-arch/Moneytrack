@@ -45,12 +45,11 @@ jobs:
 
       - name: Init Bubblewrap project
         run: |
-          echo "n" | bubblewrap init \
+          printf "n\n$JAVA_HOME_17_X64\n" | bubblewrap init \
             --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json \
             --directory=./twa-app
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
-          JAVA_HOME: ${{ env.JAVA_HOME }}
 
       - name: Copy keystore
         run: cp android.keystore twa-app/android.keystore
@@ -58,15 +57,16 @@ jobs:
       - name: Update signing config
         working-directory: twa-app
         run: |
-          cat twa-manifest.json | \
           python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
+          import json
+          with open('twa-manifest.json') as f:
+              data = json.load(f)
           data['signingKey'] = {'path': './android.keystore', 'alias': 'spendsmart'}
           data['packageId'] = 'com.spendsmart.app'
-          print(json.dumps(data, indent=2))
-          " > twa-manifest-new.json
-          mv twa-manifest-new.json twa-manifest.json
+          with open('twa-manifest.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          print('Updated twa-manifest.json')
+          "
 
       - name: Build APK and AAB
         working-directory: twa-app
@@ -79,6 +79,9 @@ jobs:
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
+      - name: List build outputs
+        run: find twa-app -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No APK/AAB found"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -87,3 +90,4 @@ jobs:
             twa-app/app-release-signed.apk
             twa-app/app-release-bundle.aab
             android.keystore
+          if-no-files-found: warn
