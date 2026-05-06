@@ -31,6 +31,18 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
+      - name: Pre-configure Bubblewrap (skip all prompts)
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json << EOF
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "${ANDROID_SDK_ROOT}"
+          }
+          EOF
+          echo "=== Bubblewrap config ==="
+          cat ~/.bubblewrap/config.json
+
       - name: Generate keystore
         run: |
           keytool -genkey -v \
@@ -43,12 +55,11 @@ jobs:
             -keypass spendsmart123 \
             -dname "CN=SpendSmart, OU=App, O=SpendSmart, L=Hyderabad, S=Telangana, C=IN"
 
-      - name: Create TWA manifest manually
+      - name: Create TWA manifest
         run: |
           mkdir -p twa-app
           cp android.keystore twa-app/android.keystore
-          
-          cat > twa-app/twa-manifest.json << 'EOF'
+          cat > twa-app/twa-manifest.json << EOF
           {
             "packageId": "com.spendsmart.app",
             "host": "venkatakalyan2461-arch.github.io",
@@ -80,18 +91,16 @@ jobs:
             "retainedBundles": [],
             "webManifestUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json",
             "generatorApp": "bubblewrap-cli",
-            "sdkDir": "/usr/local/lib/android/sdk",
-            "jdkDir": "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64"
+            "sdkDir": "${ANDROID_SDK_ROOT}",
+            "jdkDir": "${JAVA_HOME}"
           }
           EOF
-          
-          echo "=== twa-manifest.json created ==="
+          echo "=== twa-manifest.json ==="
           cat twa-app/twa-manifest.json
 
-      - name: Generate TWA project from manifest
+      - name: Generate Android project
         working-directory: twa-app
-        run: |
-          bubblewrap update
+        run: bubblewrap update
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
