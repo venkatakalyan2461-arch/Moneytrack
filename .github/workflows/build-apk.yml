@@ -28,8 +28,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
+      - name: Install tools
+        run: |
+          npm install -g @bubblewrap/cli
+          sudo apt-get install -y expect
 
       - name: Generate keystore
         run: |
@@ -45,42 +47,43 @@ jobs:
 
       - name: Init Bubblewrap project
         run: |
-          printf "n\n$JAVA_HOME_17_X64\n" | bubblewrap init \
-            --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json \
-            --directory=./twa-app
+          JAVA_PATH=$(which java | xargs readlink -f | sed 's|/bin/java||')
+          echo "Java path: $JAVA_PATH"
+          
+          expect << EOF
+          set timeout 60
+          spawn bubblewrap init --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json --directory=./twa-app
+          expect "Do you want Bubblewrap to install the JDK"
+          send "n\r"
+          expect "Path to your existing JDK 17"
+          send "$JAVA_PATH\r"
+          expect eof
+          EOF
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
-      - name: Copy keystore
-        run: cp android.keystore twa-app/android.keystore
-
-      - name: Update signing config
-        working-directory: twa-app
+      - name: Copy keystore and update config
         run: |
+          cp android.keystore twa-app/android.keystore
           python3 -c "
           import json
-          with open('twa-manifest.json') as f:
+          with open('twa-app/twa-manifest.json') as f:
               data = json.load(f)
           data['signingKey'] = {'path': './android.keystore', 'alias': 'spendsmart'}
           data['packageId'] = 'com.spendsmart.app'
-          with open('twa-manifest.json', 'w') as f:
+          with open('twa-app/twa-manifest.json', 'w') as f:
               json.dump(data, f, indent=2)
-          print('Updated twa-manifest.json')
+          print('Config updated')
           "
 
       - name: Build APK and AAB
         working-directory: twa-app
-        run: |
-          bubblewrap build \
-            --signingKeyPath=./android.keystore \
-            --signingKeyAlias=spendsmart \
-            --signingKeyPassword=spendsmart123 \
-            --signingStorePassword=spendsmart123
+        run: bubblewrap build
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
-      - name: List build outputs
-        run: find twa-app -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No APK/AAB found"
+      - name: Find build outputs
+        run: find . -name "*.apk" -o -name "*.aab" 2>/dev/null
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
