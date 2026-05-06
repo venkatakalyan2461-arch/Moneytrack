@@ -1,4 +1,4 @@
-name: Build TWA APK
+name: Build Android APK
 
 on:
   push:
@@ -28,25 +28,53 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
-      - name: Pre-configure Bubblewrap (skip all prompts)
+      - name: Install dependencies
         run: |
-          mkdir -p ~/.bubblewrap
-          cat > ~/.bubblewrap/config.json << EOF
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Create Capacitor config
+        run: |
+          cat > capacitor.config.json << 'EOF'
           {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_SDK_ROOT}"
+            "appId": "com.spendsmart.app",
+            "appName": "SpendSmart",
+            "webDir": "www",
+            "server": {
+              "url": "https://venkatakalyan2461-arch.github.io/Moneytrack",
+              "cleartext": false
+            },
+            "android": {
+              "allowMixedContent": false,
+              "captureInput": true,
+              "webContentsDebuggingEnabled": false
+            }
           }
           EOF
-          echo "=== Bubblewrap config ==="
-          cat ~/.bubblewrap/config.json
+
+      - name: Create www folder with index
+        run: |
+          mkdir -p www
+          cat > www/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta http-equiv="refresh" content="0; url=https://venkatakalyan2461-arch.github.io/Moneytrack">
+          </head>
+          <body>Loading SpendSmart...</body>
+          </html>
+          EOF
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
 
       - name: Generate keystore
         run: |
           keytool -genkey -v \
-            -keystore android.keystore \
+            -keystore release.keystore \
             -alias spendsmart \
             -keyalg RSA \
             -keysize 2048 \
@@ -55,89 +83,36 @@ jobs:
             -keypass spendsmart123 \
             -dname "CN=SpendSmart, OU=App, O=SpendSmart, L=Hyderabad, S=Telangana, C=IN"
 
-      - name: Create TWA manifest
+      - name: Build Release APK
+        working-directory: android
         run: |
-          mkdir -p twa-app
-          cp android.keystore twa-app/android.keystore
-          cat > twa-app/twa-manifest.json << EOF
-          {
-            "packageId": "com.spendsmart.app",
-            "host": "venkatakalyan2461-arch.github.io",
-            "name": "SpendSmart",
-            "launcherName": "SpendSmart",
-            "display": "standalone",
-            "themeColor": "#1A3C6E",
-            "navigationColor": "#1A3C6E",
-            "navigationColorDark": "#1A3C6E",
-            "navigationDividerColor": "#1A3C6E",
-            "navigationDividerColorDark": "#1A3C6E",
-            "backgroundColor": "#1A3C6E",
-            "enableNotifications": true,
-            "startUrl": "/Moneytrack/",
-            "iconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
-            "maskableIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
-            "monochromeIconUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png",
-            "shortcuts": [],
-            "signingKey": {
-              "path": "./android.keystore",
-              "alias": "spendsmart"
-            },
-            "appVersionName": "1.0.0",
-            "appVersionCode": 1,
-            "minSdkVersion": 19,
-            "orientation": "portrait",
-            "fingerprints": [],
-            "additionalTrustedOrigins": [],
-            "retainedBundles": [],
-            "webManifestUrl": "https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json",
-            "generatorApp": "bubblewrap-cli",
-            "sdkDir": "${ANDROID_SDK_ROOT}",
-            "jdkDir": "${JAVA_HOME}"
-          }
-          EOF
-          echo "=== twa-manifest.json ==="
-          cat twa-app/twa-manifest.json
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=../release.keystore \
+            -Pandroid.injected.signing.store.password=spendsmart123 \
+            -Pandroid.injected.signing.key.alias=spendsmart \
+            -Pandroid.injected.signing.key.password=spendsmart123
 
-      - name: Generate Android project
-        working-directory: twa-app
+      - name: Build Release AAB
+        working-directory: android
         run: |
-          sudo apt-get install -y expect -q
-          expect << 'EOF'
-          set timeout 60
-          spawn bubblewrap update
-          expect "versionName"
-          send "1.0.0\r"
-          expect "versionCode"
-          send "1\r"
-          expect eof
-          EOF
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: true
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=../release.keystore \
+            -Pandroid.injected.signing.store.password=spendsmart123 \
+            -Pandroid.injected.signing.key.alias=spendsmart \
+            -Pandroid.injected.signing.key.password=spendsmart123
 
-      - name: Build APK and AAB
-        working-directory: twa-app
+      - name: Find APK and AAB
         run: |
-          expect << 'EOF'
-          set timeout 300
-          spawn bubblewrap build
-          expect "Password for the Key Store"
-          send "spendsmart123\r"
-          expect "Password for the Key"
-          send "spendsmart123\r"
-          expect eof
-          EOF
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: true
-
-      - name: Find outputs
-        run: find . -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No files found"
+          find android -name "*.apk" 2>/dev/null
+          find android -name "*.aab" 2>/dev/null
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: spendsmart-build
+          name: spendsmart-release
           path: |
-            twa-app/app-release-signed.apk
-            twa-app/app-release-bundle.aab
-            android.keystore
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
+            release.keystore
           if-no-files-found: warn
