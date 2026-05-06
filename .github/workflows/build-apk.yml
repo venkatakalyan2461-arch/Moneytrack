@@ -47,23 +47,36 @@ jobs:
 
       - name: Init Bubblewrap project
         run: |
-          JAVA_PATH=$(which java | xargs readlink -f | sed 's|/bin/java||')
-          echo "Java path: $JAVA_PATH"
-          
-          expect << EOF
-          set timeout 60
+          JAVA_PATH="${JAVA_HOME}"
+          ANDROID_PATH="${ANDROID_SDK_ROOT}"
+          echo "Java: $JAVA_PATH"
+          echo "Android: $ANDROID_PATH"
+          mkdir -p twa-app
+
+          expect << EXPECT_EOF
+          set timeout 120
           spawn bubblewrap init --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json --directory=./twa-app
           expect "Do you want Bubblewrap to install the JDK"
           send "n\r"
           expect "Path to your existing JDK 17"
           send "$JAVA_PATH\r"
+          expect "Do you want Bubblewrap to install the Android SDK"
+          send "n\r"
+          expect "Path to your existing Android SDK"
+          send "$ANDROID_PATH\r"
           expect eof
-          EOF
+          EXPECT_EOF
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
+      - name: Check twa-app created
+        run: |
+          ls -la twa-app/ || echo "twa-app not created"
+          cat twa-app/twa-manifest.json || echo "No manifest"
+
       - name: Copy keystore and update config
         run: |
+          ls -la twa-app/
           cp android.keystore twa-app/android.keystore
           python3 -c "
           import json
@@ -83,7 +96,7 @@ jobs:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
       - name: Find build outputs
-        run: find . -name "*.apk" -o -name "*.aab" 2>/dev/null
+        run: find . -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No files found"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
