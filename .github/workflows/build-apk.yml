@@ -1,0 +1,56 @@
+name: Build TWA APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Init TWA
+        run: |
+          bubblewrap init --manifest=https://venkatakalyan2461-arch.github.io/Moneytrack/manifest.json \
+            --directory=./twa-app \
+            --packageId=com.spendsmart.app \
+            --name=SpendSmart \
+            --launcherName=SpendSmart \
+            --display=standalone \
+            --themeColor=#1A3C6E \
+            --backgroundColor=#1A3C6E \
+            --startUrl=/Moneytrack/ \
+            --iconUrl=https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png \
+            --maskableIconUrl=https://venkatakalyan2461-arch.github.io/Moneytrack/icon-512.png \
+            --signingKeyPath=./android.keystore \
+            --signingKeyAlias=spendsmart \
+            --signingKeyPassword=spendsmart123 \
+            --signingKeyStorePassword=spendsmart123
+
+      - name: Build APK
+        working-directory: ./twa-app
+        run: bubblewrap build
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: spendsmart-apk
+          path: |
+            ./twa-app/*.apk
+            ./twa-app/*.aab
