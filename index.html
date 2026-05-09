@@ -527,15 +527,7 @@
       <div class="settings-card">
         <div class="settings-row" onclick="openProfilePage()" style="cursor:pointer;">
           <div class="settings-icon">👤</div>
-          <div class="settings-info"><div class="settings-label">My Profile</div><div class="settings-sub">Update your name</div></div>
-          <span class="settings-arrow">›</span>
-        </div>
-      </div>
-      <div class="settings-section-title">Notifications</div>
-      <div class="settings-card">
-        <div class="settings-row" onclick="openNotifPage()" style="cursor:pointer;">
-          <div class="settings-icon">🔔</div>
-          <div class="settings-info"><div class="settings-label">Notifications</div><div class="settings-sub" id="notif-summary-sub">Manage alerts & reminders</div></div>
+          <div class="settings-info"><div class="settings-label">My Profile</div><div class="settings-sub">Edit your name</div></div>
           <span class="settings-arrow">›</span>
         </div>
       </div>
@@ -605,11 +597,6 @@
           <div class="settings-icon">🌙</div>
           <div class="settings-info"><div class="settings-label">Daily Reminder</div><div class="settings-sub">Get reminded to log expenses every day</div></div>
           <button class="toggle" id="toggle-daily" onclick="toggleNotifType('daily')"></button>
-        </div>
-        <div class="settings-row">
-          <div class="settings-icon">📊</div>
-          <div class="settings-info"><div class="settings-label">Weekly Summary</div><div class="settings-sub">Receive your weekly spending summary every Sunday</div></div>
-          <button class="toggle" id="toggle-weekly" onclick="toggleNotifType('weekly')"></button>
         </div>
       </div>
       <div class="settings-section-title">Budget Alerts</div>
@@ -1238,8 +1225,10 @@ async function toggleNotifType(type) {
   if(!current) {
     if(!('Notification' in window)) {
       setNotifEnabled(type,true); if(toggleEl) toggleEl.classList.add('on');
-      const labels={daily:"Daily reminder set! You'll be notified at 9PM 🌙",weekly:'Weekly summary every Sunday at 10AM 📊',budget:'Budget alerts enabled 💰',dailylimit:'Daily limit alerts enabled 📅'};
-      showToast(labels[type]||'Enabled ✅'); return;
+      const labels={daily:"Daily reminder set! You'll be notified at 9PM 🌙",budget:'Budget alerts enabled 💰',dailylimit:'Daily limit alerts enabled 📅'};
+      showToast(labels[type]||'Enabled ✅');
+      sendNotifTag(type, true);
+      return;
     }
     if(Notification.permission==='denied') { showToast('Enable notifications in your browser settings'); return; }
     if(Notification.permission!=='granted') {
@@ -1247,13 +1236,32 @@ async function toggleNotifType(type) {
       if(result!=='granted') { showToast('Permission denied. Enable in settings.'); return; }
     }
     setNotifEnabled(type,true); if(toggleEl) toggleEl.classList.add('on');
-    const labels={daily:"Daily reminder set! You'll be notified at 9PM 🌙",weekly:'Weekly summary every Sunday at 10AM 📊',budget:'Budget alerts enabled 💰',dailylimit:'Daily limit alerts enabled 📅'};
+    const labels={daily:"Daily reminder set! You'll be notified at 9PM 🌙",budget:'Budget alerts enabled 💰',dailylimit:'Daily limit alerts enabled 📅'};
     showToast(labels[type]||'Enabled ✅');
+    sendNotifTag(type, true);
     try { new Notification('SpendSmart 💰',{body:"Notifications enabled! You'll receive daily reminders at 9PM.",icon:'icon-192.png'}); } catch(e) {}
     scheduleNotifications();
   } else {
-    setNotifEnabled(type,false); if(toggleEl) toggleEl.classList.remove('on'); showToast('Notification disabled');
+    setNotifEnabled(type,false); if(toggleEl) toggleEl.classList.remove('on');
+    showToast('Notification disabled');
+    sendNotifTag(type, false);
   }
+}
+
+function sendNotifTag(type, enabled) {
+  try {
+    const tag = {};
+    tag['notifications_' + type] = enabled ? 'true' : 'false';
+    const onesignalTags = { tags: tag };
+    if (window.median && window.median.onesignal && window.median.onesignal.tags) {
+      window.median.onesignal.tags.setTags(onesignalTags);
+    } else if (window.gonative && window.gonative.onesignal && window.gonative.onesignal.tags) {
+      window.gonative.onesignal.tags.setTags(onesignalTags);
+    } else {
+      window.location.href = 'gonative://onesignal/tags/set?tags=' + encodeURIComponent(JSON.stringify(tag));
+    }
+    console.log('Notif tag sent:', tag);
+  } catch(e) { console.log('Tag error:', e); }
 }
 
 function openBudgetPage() {
