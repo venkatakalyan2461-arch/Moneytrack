@@ -19,6 +19,49 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- OneSignal -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "68d516a4-31d7-49a0-8846-1a6dbc08f2d2",
+      notifyButton: { enable: false },
+      allowLocalhostAsSecureOrigin: true,
+    });
+    // Send user data as tags for personalized notifications
+    setTimeout(() => {
+      try {
+        const txns = JSON.parse(localStorage.getItem('spendsmart_txns') || '[]');
+        const now = new Date();
+        const name = localStorage.getItem('spendsmart_name') || '';
+        const weekStart = new Date(now.getTime() - 7 * 86400000);
+        const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
+        const weekTotal = weekTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
+        const monthTxns = txns.filter(t => {
+          const d = new Date(t.date);
+          return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+        });
+        const monthTotal = monthTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
+        const catTotals = {};
+        weekTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
+        const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+        OneSignal.User.addTags({
+          user_name: name,
+          week_total: String(Math.round(weekTotal)),
+          month_total: String(Math.round(monthTotal)),
+          top_category: topCat ? topCat[0] : 'None',
+          top_category_amount: topCat ? String(Math.round(topCat[1])) : '0',
+          transaction_count: String(weekTxns.length),
+          last_active: now.toLocaleDateString('en-IN'),
+        });
+        console.log('OneSignal tags updated');
+      } catch(e) { console.log('OneSignal tag error:', e); }
+    }, 3000);
+  });
+</script>
+
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -53,7 +96,6 @@
     overflow: hidden;
   }
 
-  /* ── App Shell ── */
   #app {
     display: flex;
     flex-direction: column;
@@ -65,40 +107,29 @@
     box-shadow: 0 0 40px rgba(0,0,0,0.12);
   }
 
-  .screen {
-    display: none;
-    flex-direction: column;
-    flex: 1;
-    overflow: hidden;
-  }
+  .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; }
   .screen.active { display: flex; }
 
   .scroll-body {
-    flex: 1;
-    overflow-y: auto;
+    flex: 1; overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 80px;
   }
   .scroll-body::-webkit-scrollbar { display: none; }
 
-  /* ── Header ── */
   .header {
     background: var(--primary);
     padding: 48px 20px 20px;
-    color: white;
-    flex-shrink: 0;
+    color: white; flex-shrink: 0;
   }
   .header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 20px;
   }
   .header-greeting { color: var(--primary-accent); font-size: 12px; }
   .header-title { font-size: 22px; font-weight: 800; color: white; }
   .avatar {
-    width: 38px; height: 38px;
-    border-radius: 50%;
+    width: 38px; height: 38px; border-radius: 50%;
     background: var(--primary-light);
     display: flex; align-items: center; justify-content: center;
     font-weight: 800; font-size: 14px; color: white;
@@ -107,18 +138,13 @@
   .header-amount { font-size: 36px; font-weight: 800; color: white; line-height: 1; }
   .header-sub { color: var(--primary-accent); font-size: 11px; margin-top: 4px; }
 
-  /* simple appbar for inner screens */
   .appbar {
     background: var(--primary);
     padding: 48px 20px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
   }
   .appbar-back {
-    width: 34px; height: 34px;
-    border-radius: 50%;
+    width: 34px; height: 34px; border-radius: 50%;
     background: rgba(255,255,255,0.15);
     border: none; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -126,224 +152,100 @@
   }
   .appbar-title { font-size: 18px; font-weight: 800; color: white; }
 
-  /* ── Bottom Nav ── */
   .bottom-nav {
-    display: flex;
-    background: white;
+    display: flex; background: white;
     border-top: 1px solid var(--border);
-    padding: 8px 4px 12px;
-    flex-shrink: 0;
+    padding: 8px 4px 12px; flex-shrink: 0;
   }
   .nav-item {
-    flex: 1;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 3px; cursor: pointer; padding: 6px 4px;
-    border-radius: 10px; transition: background 0.2s;
-    border: none; background: none;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; cursor: pointer;
+    padding: 6px 4px; border-radius: 10px;
+    transition: background 0.2s; border: none; background: none;
   }
   .nav-item.active { background: var(--primary-surface); }
   .nav-icon { font-size: 20px; }
-  .nav-label {
-    font-size: 10px; font-weight: 700;
-    color: var(--text-muted);
-    font-family: 'Nunito', sans-serif;
-  }
+  .nav-label { font-size: 10px; font-weight: 700; color: var(--text-muted); font-family: 'Nunito', sans-serif; }
   .nav-item.active .nav-label { color: var(--primary); }
 
-  /* ── Cards ── */
-  .card {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 16px;
-    margin: 0 16px 12px;
-  }
-  .card-title {
-    font-size: 14px; font-weight: 700;
-    color: var(--text); margin-bottom: 12px;
-  }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; margin: 0 16px 12px; }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
 
-  /* ── Stat Row ── */
-  .stat-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin: 12px 16px;
-  }
-  .stat-card {
-    background: white;
-    border-radius: 12px;
-    padding: 14px;
-  }
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 16px; }
+  .stat-card { background: white; border-radius: 12px; padding: 14px; }
   .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
   .stat-value { font-size: 20px; font-weight: 800; color: var(--text); }
 
-  /* ── Category Bar ── */
   .cat-row { margin-bottom: 12px; }
   .cat-row:last-child { margin-bottom: 0; }
   .cat-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
   .cat-left { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
   .cat-amount { font-size: 13px; font-weight: 700; color: var(--text); }
-  .progress-track {
-    height: 6px; background: var(--bg);
-    border-radius: 4px; overflow: hidden;
-  }
+  .progress-track { height: 6px; background: var(--bg); border-radius: 4px; overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
 
-  /* ── Transaction Tile ── */
   .txn-tile {
     display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px;
-    background: white; border-radius: 12px;
-    margin: 0 16px 6px;
-    cursor: pointer; transition: transform 0.1s;
+    padding: 12px 16px; background: white; border-radius: 12px;
+    margin: 0 16px 6px; cursor: pointer; transition: transform 0.1s;
     position: relative; overflow: hidden;
   }
   .txn-tile:active { transform: scale(0.98); }
-  .txn-icon {
-    width: 42px; height: 42px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
-  }
+  .txn-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
   .txn-info { flex: 1; min-width: 0; }
   .txn-merchant { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .txn-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   .txn-right { text-align: right; flex-shrink: 0; }
   .txn-amount { font-size: 15px; font-weight: 800; color: var(--red); }
-  .upi-badge {
-    display: inline-block;
-    background: var(--primary-surface);
-    color: var(--primary);
-    font-size: 9px; font-weight: 800;
-    padding: 2px 5px; border-radius: 4px;
-    margin-top: 3px;
-  }
+  .upi-badge { display: inline-block; background: var(--primary-surface); color: var(--primary); font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 4px; margin-top: 3px; }
 
-  /* swipe to delete */
-  .txn-delete-bg {
-    position: absolute; right: 0; top: 0; bottom: 0;
-    width: 80px; background: var(--red-light);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--red); font-size: 20px;
-    transform: translateX(100%);
-    transition: transform 0.2s;
-  }
-
-  /* ── Section Header ── */
-  .section-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 16px 8px;
-  }
+  .section-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 8px; }
   .section-title { font-size: 15px; font-weight: 800; }
   .section-link { font-size: 12px; color: var(--primary); font-weight: 700; cursor: pointer; border: none; background: none; font-family: 'Nunito', sans-serif; }
 
-  /* ── FAB ── */
   .fab {
-    position: fixed;
-    bottom: 80px; right: calc(50% - 210px + 16px);
-    background: var(--primary);
-    color: white; border: none; cursor: pointer;
-    border-radius: 28px;
-    padding: 14px 22px;
-    font-size: 14px; font-weight: 800;
-    font-family: 'Nunito', sans-serif;
+    position: fixed; bottom: 80px; right: calc(50% - 210px + 16px);
+    background: var(--primary); color: white; border: none; cursor: pointer;
+    border-radius: 28px; padding: 14px 22px;
+    font-size: 14px; font-weight: 800; font-family: 'Nunito', sans-serif;
     display: flex; align-items: center; gap: 8px;
     box-shadow: 0 4px 20px rgba(15,110,86,0.35);
-    transition: transform 0.15s, box-shadow 0.15s;
-    z-index: 100;
+    transition: transform 0.15s, box-shadow 0.15s; z-index: 100;
   }
   .fab:active { transform: scale(0.96); box-shadow: 0 2px 10px rgba(15,110,86,0.3); }
   .fab-icon { font-size: 20px; }
 
-  /* ── Add Expense Form ── */
-  .form-section {
-    background: white; border-radius: 16px;
-    margin: 12px 16px; padding: 18px;
-  }
+  .form-section { background: white; border-radius: 16px; margin: 12px 16px; padding: 18px; }
   .form-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
   .amount-row { display: flex; align-items: center; gap: 8px; }
   .rupee-sign { font-size: 36px; font-weight: 800; color: var(--primary); }
-  .amount-input {
-    font-size: 36px; font-weight: 800;
-    border: none; outline: none; background: transparent;
-    color: var(--text); width: 100%;
-    font-family: 'Nunito', sans-serif;
-  }
+  .amount-input { font-size: 36px; font-weight: 800; border: none; outline: none; background: transparent; color: var(--text); width: 100%; font-family: 'Nunito', sans-serif; }
   .amount-input::placeholder { color: var(--border); }
-  .text-input {
-    width: 100%; padding: 12px 14px;
-    background: var(--bg); border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 600;
-    font-family: 'Nunito', sans-serif; color: var(--text);
-    outline: none; transition: box-shadow 0.2s;
-  }
+  .text-input { width: 100%; padding: 12px 14px; background: var(--bg); border: none; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: 'Nunito', sans-serif; color: var(--text); outline: none; transition: box-shadow 0.2s; }
   .text-input:focus { box-shadow: 0 0 0 2px var(--primary); }
 
-  /* category chips */
   .cat-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .cat-chip {
-    display: flex; align-items: center; gap: 5px;
-    padding: 7px 12px; border-radius: 10px;
-    background: var(--bg); border: 1.5px solid transparent;
-    cursor: pointer; font-size: 12px; font-weight: 700;
-    font-family: 'Nunito', sans-serif; color: var(--text-muted);
-    transition: all 0.15s;
-  }
+  .cat-chip { display: flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 10px; background: var(--bg); border: 1.5px solid transparent; cursor: pointer; font-size: 12px; font-weight: 700; font-family: 'Nunito', sans-serif; color: var(--text-muted); transition: all 0.15s; }
   .cat-chip.selected { background: rgba(0,0,0,0.05); }
 
-  /* save btn */
-  .save-btn {
-    width: 100%; padding: 15px;
-    background: var(--primary); color: white;
-    border: none; border-radius: 13px;
-    font-size: 15px; font-weight: 800;
-    font-family: 'Nunito', sans-serif;
-    cursor: pointer; margin: 16px 0 0;
-    transition: transform 0.1s;
-  }
+  .save-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 13px; font-size: 15px; font-weight: 800; font-family: 'Nunito', sans-serif; cursor: pointer; margin: 16px 0 0; transition: transform 0.1s; }
   .save-btn:active { transform: scale(0.98); }
 
-  /* ── History ── */
-  .search-box {
-    margin: 12px 16px;
-    position: relative;
-  }
-  .search-input {
-    width: 100%; padding: 12px 14px 12px 40px;
-    background: white; border: none; border-radius: 12px;
-    font-size: 13px; font-family: 'Nunito', sans-serif;
-    outline: none; color: var(--text);
-  }
-  .search-icon {
-    position: absolute; left: 12px; top: 50%;
-    transform: translateY(-50%);
-    font-size: 16px; color: var(--text-muted);
-  }
-  .day-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 16px 6px;
-  }
+  .search-box { margin: 12px 16px; position: relative; }
+  .search-input { width: 100%; padding: 12px 14px 12px 40px; background: white; border: none; border-radius: 12px; font-size: 13px; font-family: 'Nunito', sans-serif; outline: none; color: var(--text); }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-muted); }
+  .day-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 6px; }
   .day-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
   .day-total { font-size: 12px; font-weight: 800; color: var(--red); }
 
-  /* ── Charts ── */
-  .chart-header {
-    background: var(--primary);
-    padding: 16px 20px;
-    display: flex; justify-content: space-between; align-items: center;
-    flex-shrink: 0;
-  }
+  .chart-header { background: var(--primary); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .chart-month { color: var(--primary-accent); font-size: 12px; }
   .chart-total { color: white; font-size: 28px; font-weight: 800; }
   .chart-count { color: white; font-size: 22px; font-weight: 800; text-align: right; }
   .chart-count-label { color: var(--primary-accent); font-size: 12px; }
   .canvas-wrap { padding: 16px; height: 220px; }
 
-  /* legend */
-  .legend-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 0;
-  }
+  .legend-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
   .legend-left { display: flex; align-items: center; gap: 8px; }
   .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
   .legend-name { font-size: 13px; font-weight: 600; }
@@ -351,180 +253,55 @@
   .legend-pct { font-size: 12px; color: var(--text-muted); }
   .legend-amt { font-size: 13px; font-weight: 800; }
 
-  /* ── Settings ── */
-  .settings-section-title {
-    font-size: 12px; font-weight: 700; color: var(--text-muted);
-    padding: 16px 16px 6px; text-transform: uppercase; letter-spacing: 0.5px;
-  }
+  .settings-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); padding: 16px 16px 6px; text-transform: uppercase; letter-spacing: 0.5px; }
   .settings-card { background: white; border-radius: 16px; margin: 0 16px 12px; overflow: hidden; }
-  .settings-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-  }
+  .settings-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
   .settings-row:last-child { border-bottom: none; }
-  .settings-icon {
-    width: 38px; height: 38px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; background: var(--bg); flex-shrink: 0;
-  }
+  .settings-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: var(--bg); flex-shrink: 0; }
   .settings-info { flex: 1; }
   .settings-label { font-size: 14px; font-weight: 700; }
   .settings-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
   .settings-arrow { color: var(--text-light); font-size: 16px; }
 
-  /* toggle */
-  .toggle {
-    width: 44px; height: 24px; border-radius: 12px;
-    background: var(--border); position: relative;
-    cursor: pointer; transition: background 0.2s; flex-shrink: 0;
-    border: none;
-  }
+  .toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--border); position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; border: none; }
   .toggle.on { background: var(--primary); }
-  .toggle::after {
-    content: ''; position: absolute;
-    width: 20px; height: 20px; border-radius: 50%;
-    background: white; top: 2px; left: 2px;
-    transition: left 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
+  .toggle::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: white; top: 2px; left: 2px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
   .toggle.on::after { left: 22px; }
 
-  /* privacy banner */
-  .privacy-banner {
-    margin: 0 16px 20px;
-    background: var(--primary-surface);
-    border-radius: 14px; padding: 14px 16px;
-    display: flex; gap: 10px; align-items: flex-start;
-  }
+  .privacy-banner { margin: 0 16px 20px; background: var(--primary-surface); border-radius: 14px; padding: 14px 16px; display: flex; gap: 10px; align-items: flex-start; }
   .privacy-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
   .privacy-text { font-size: 12px; color: var(--primary); font-weight: 600; line-height: 1.5; }
 
-  /* ── Toast ── */
-  .toast {
-    position: fixed; bottom: 100px;
-    left: 50%; transform: translateX(-50%) translateY(20px);
-    background: #2C2C2A; color: white;
-    padding: 10px 20px; border-radius: 20px;
-    font-size: 13px; font-weight: 600;
-    opacity: 0; transition: all 0.3s;
-    z-index: 999; white-space: nowrap;
-    pointer-events: none;
-  }
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #2C2C2A; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 999; white-space: nowrap; pointer-events: none; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* ── Empty State ── */
-  .empty {
-    text-align: center; padding: 40px 20px;
-    color: var(--text-muted);
-  }
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
   .empty-icon { font-size: 48px; margin-bottom: 12px; }
   .empty-text { font-size: 14px; font-weight: 600; }
   .empty-sub { font-size: 12px; margin-top: 4px; }
 
-  /* date input */
-  .date-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 14px;
-    background: var(--bg); border-radius: 10px;
-  }
+  .date-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg); border-radius: 10px; }
   .date-label-left { font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-  input[type="date"] {
-    border: none; background: transparent; outline: none;
-    font-family: 'Nunito', sans-serif;
-    font-size: 13px; font-weight: 700; color: var(--primary);
-    cursor: pointer;
-  }
+  input[type="date"] { border: none; background: transparent; outline: none; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; color: var(--primary); cursor: pointer; }
 
-  @media (min-width: 421px) {
-    .fab { right: calc(50% - 210px + 16px); }
-  }
+  .period-btn { flex: 1; padding: 8px 4px; background: var(--card); border: 1.5px solid var(--border); border-radius: 10px; font-size: 11px; font-weight: 700; font-family: 'Nunito', sans-serif; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .period-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-  /* ── Dark Mode ── */
-  body.dark {
-    --bg: #1A1A1A;
-    --card: #242424;
-    --text: #F0EFEA;
-    --text-muted: #9A9890;
-    --text-light: #5A5855;
-    --border: #333330;
-    --red-light: #3A1A1A;
-    --primary-surface: #1A2E27;
-  }
-  body.dark .header { background: #0A4A3A; }
-  body.dark .appbar { background: #0A4A3A; }
-  body.dark .bottom-nav { background: #1E1E1E; border-top-color: #333; }
-  body.dark .budget-banner.safe { background: #1A2E27; }
-  body.dark .budget-banner.warning { background: #2E2A1A; color: #D4A017; }
-  body.dark .compare-card { background: var(--card); }
-  body.dark input { color: var(--text); }
-  body.dark .text-input { background: #2E2E2E; color: var(--text); }
-  body.dark .amount-input { color: var(--text); }
-  body.dark .search-input { background: #2E2E2E; color: var(--text); }
-  body.dark .cat-chip { background: #2E2E2E; color: var(--text-muted); }
-  body.dark .date-row { background: #2E2E2E; }
-  body.dark input[type="date"] { color-scheme: dark; }
-
-  /* ── Period Buttons ── */
-  .period-btn {
-    flex: 1; padding: 8px 4px;
-    background: var(--card); border: 1.5px solid var(--border);
-    border-radius: 10px; font-size: 11px; font-weight: 700;
-    font-family: 'Nunito', sans-serif; color: var(--text-muted);
-    cursor: pointer; transition: all 0.15s;
-  }
-  .period-btn.active {
-    background: var(--primary); color: white;
-    border-color: var(--primary);
-  }
-  /* ── Action Sheet ── */
-  .action-overlay {
-    position: fixed; inset: 0; z-index: 999;
-    background: rgba(0,0,0,0.4);
-    display: flex; align-items: flex-end;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.2s;
-  }
+  .action-overlay { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .action-overlay.show { opacity: 1; pointer-events: all; }
-  .action-sheet {
-    background: white; width: 100%;
-    border-radius: 20px 20px 0 0;
-    padding: 12px 0 32px;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-  }
+  .action-sheet { background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 12px 0 32px; transform: translateY(100%); transition: transform 0.3s ease; }
   .action-overlay.show .action-sheet { transform: translateY(0); }
-  .action-handle {
-    width: 36px; height: 4px; background: var(--border);
-    border-radius: 2px; margin: 0 auto 16px;
-  }
-  .action-txn-info {
-    padding: 0 20px 14px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 8px;
-  }
+  .action-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+  .action-txn-info { padding: 0 20px 14px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
   .action-merchant { font-size: 16px; font-weight: 800; color: var(--text); }
   .action-amount { font-size: 14px; color: var(--red); font-weight: 700; margin-top: 2px; }
-  .action-btn {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 20px; cursor: pointer;
-    border: none; background: none; width: 100%;
-    font-family: 'Nunito', sans-serif; text-align: left;
-    transition: background 0.1s;
-  }
+  .action-btn { display: flex; align-items: center; gap: 14px; padding: 14px 20px; cursor: pointer; border: none; background: none; width: 100%; font-family: 'Nunito', sans-serif; text-align: left; transition: background 0.1s; }
   .action-btn:active { background: var(--bg); }
   .action-btn-icon { font-size: 20px; width: 28px; text-align: center; }
   .action-btn-label { font-size: 15px; font-weight: 600; color: var(--text); }
   .action-btn.danger .action-btn-label { color: var(--red); }
-  .action-cancel {
-    margin: 8px 16px 0;
-    padding: 14px;
-    background: var(--bg); border: none; border-radius: 12px;
-    width: calc(100% - 32px); font-size: 15px; font-weight: 700;
-    font-family: 'Nunito', sans-serif; cursor: pointer; color: var(--text);
-  }
-  /* ── First Time Guide ── */
+  .action-cancel { margin: 8px 16px 0; padding: 14px; background: var(--bg); border: none; border-radius: 12px; width: calc(100% - 32px); font-size: 15px; font-weight: 700; font-family: 'Nunito', sans-serif; cursor: pointer; color: var(--text); }
+
   .guide-overlay { position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 20px 110px; }
   .guide-card { background:white;border-radius:20px;padding:24px;width:100%;max-width:380px;text-align:center; }
   .guide-emoji { font-size:44px;margin-bottom:10px; }
@@ -536,14 +313,7 @@
   .guide-btn { width:100%;padding:13px;background:#0F6E56;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer; }
   .guide-skip { margin-top:10px;background:none;border:none;color:#888780;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif;width:100%;padding:6px; }
 
-  .onboard-overlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: #0F6E56;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 32px 24px;
-    transition: opacity 0.4s, transform 0.4s;
-  }
+  .onboard-overlay { position: fixed; inset: 0; z-index: 9999; background: #0F6E56; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; transition: opacity 0.4s, transform 0.4s; }
   .onboard-overlay.hide { opacity: 0; pointer-events: none; transform: translateY(-20px); }
   .onboard-logo { font-size: 64px; margin-bottom: 8px; }
   .onboard-app-name { font-size: 28px; font-weight: 800; color: white; margin-bottom: 4px; }
@@ -551,41 +321,22 @@
   .onboard-card { background: white; border-radius: 24px; padding: 28px 24px; width: 100%; max-width: 360px; }
   .onboard-title { font-size: 20px; font-weight: 800; color: #2C2C2A; margin-bottom: 6px; }
   .onboard-sub { font-size: 13px; color: #888780; margin-bottom: 20px; }
-  .onboard-input {
-    width: 100%; padding: 14px 16px;
-    background: #F4F6F5; border: 2px solid transparent;
-    border-radius: 14px; font-size: 16px; font-weight: 700;
-    font-family: 'Nunito', sans-serif; color: #2C2C2A;
-    outline: none; transition: border-color 0.2s; margin-bottom: 14px;
-  }
+  .onboard-input { width: 100%; padding: 14px 16px; background: #F4F6F5; border: 2px solid transparent; border-radius: 14px; font-size: 16px; font-weight: 700; font-family: 'Nunito', sans-serif; color: #2C2C2A; outline: none; transition: border-color 0.2s; margin-bottom: 14px; }
   .onboard-input:focus { border-color: #0F6E56; }
-  .onboard-btn {
-    width: 100%; padding: 15px;
-    background: #0F6E56; color: white; border: none;
-    border-radius: 14px; font-size: 16px; font-weight: 800;
-    font-family: 'Nunito', sans-serif; cursor: pointer;
-  }
+  .onboard-btn { width: 100%; padding: 15px; background: #0F6E56; color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 800; font-family: 'Nunito', sans-serif; cursor: pointer; }
   .onboard-features { display: flex; justify-content: space-around; margin-top: 32px; width: 100%; max-width: 360px; }
   .onboard-feat { text-align: center; }
   .onboard-feat-icon { font-size: 26px; margin-bottom: 6px; }
   .onboard-feat-label { font-size: 11px; font-weight: 700; color: #9FE1CB; }
 
-  .budget-banner {
-    margin: 0 16px 10px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    display: flex; align-items: center; gap: 10px;
-    font-size: 12px; font-weight: 700;
-  }
+  .budget-banner { margin: 0 16px 10px; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; }
   .budget-banner.safe { background: var(--primary-surface); color: var(--primary); }
   .budget-banner.warning { background: #FFF3CD; color: #856404; }
   .budget-banner.danger { background: var(--red-light); color: var(--red); }
   .budget-banner-icon { font-size: 20px; flex-shrink: 0; }
-  .budget-progress-wrap { margin: 0 16px 12px; }
   .budget-progress-track { height: 8px; background: var(--border); border-radius: 6px; overflow: hidden; margin-top: 6px; }
   .budget-progress-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
 
-  /* ── Comparison Card ── */
   .compare-card { background: white; border-radius: 16px; margin: 0 16px 12px; padding: 16px; }
   .compare-title { font-size: 14px; font-weight: 800; margin-bottom: 14px; }
   .compare-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -598,7 +349,6 @@
   .compare-diff.down { background: var(--primary-surface); color: var(--primary); }
   .compare-diff.same { background: var(--bg); color: var(--text-muted); }
 
-  /* ── Settings Budget/Notif ── */
   .budget-input-wrap { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 10px; padding: 10px 14px; }
   .budget-prefix { font-size: 16px; font-weight: 800; color: var(--primary); }
   .budget-inp { border: none; background: transparent; outline: none; font-size: 16px; font-weight: 700; font-family: 'Nunito', sans-serif; color: var(--text); width: 100%; }
@@ -608,7 +358,7 @@
 <body>
 <div id="app">
 
-  <!-- ═══════════════ ONBOARDING ═══════════════ -->
+  <!-- ONBOARDING -->
   <div class="onboard-overlay" id="onboard">
     <div class="onboard-logo">💰</div>
     <div class="onboard-app-name">SpendSmart</div>
@@ -616,25 +366,17 @@
     <div class="onboard-card">
       <div class="onboard-title">Hey there! 👋</div>
       <div class="onboard-sub">What should we call you?</div>
-      <input class="onboard-input" type="text" id="onboard-name" placeholder="Enter your name" maxlength="20"
-        onkeydown="if(event.key==='Enter') completeOnboard()">
+      <input class="onboard-input" type="text" id="onboard-name" placeholder="Enter your name" maxlength="20" onkeydown="if(event.key==='Enter') completeOnboard()">
       <button class="onboard-btn" onclick="completeOnboard()">Get Started →</button>
     </div>
     <div class="onboard-features">
-      <div class="onboard-feat">
-        <div class="onboard-feat-icon">📊</div>
-        <div class="onboard-feat-label">Smart Charts</div>
-      </div>
-      <div class="onboard-feat">
-        <div class="onboard-feat-icon">🔔</div>
-        <div class="onboard-feat-label">Budget Alerts</div>
-      </div>
-      <div class="onboard-feat">
-        <div class="onboard-feat-icon">🔒</div>
-        <div class="onboard-feat-label">100% Private</div>
-      </div>
+      <div class="onboard-feat"><div class="onboard-feat-icon">📊</div><div class="onboard-feat-label">Smart Charts</div></div>
+      <div class="onboard-feat"><div class="onboard-feat-icon">🔔</div><div class="onboard-feat-label">Budget Alerts</div></div>
+      <div class="onboard-feat"><div class="onboard-feat-icon">🔒</div><div class="onboard-feat-label">100% Private</div></div>
     </div>
   </div>
+
+  <!-- HOME SCREEN -->
   <div class="screen active" id="screen-home">
     <div class="header">
       <div class="header-row">
@@ -643,54 +385,39 @@
           <div class="header-title">SpendSmart</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          
-          <div class="avatar" id="user-avatar">K</div>
+          <div class="avatar" id="user-avatar">S</div>
         </div>
       </div>
       <div class="header-label">Spent this month</div>
       <div class="header-amount" id="home-total">₹0</div>
       <div class="header-sub" id="home-month"></div>
     </div>
-
     <div class="scroll-body">
       <div class="stat-row">
-        <div class="stat-card">
-          <div class="stat-label">Today</div>
-          <div class="stat-value" id="home-today">₹0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Transactions</div>
-          <div class="stat-value" id="home-count">0</div>
-        </div>
+        <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value" id="home-today">₹0</div></div>
+        <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" id="home-count">0</div></div>
       </div>
-
-      <!-- Month vs Month Comparison -->
       <div id="compare-section" style="display:none"></div>
-
+      <div id="budget-banner" style="display:none"></div>
       <div class="section-header">
         <span class="section-title">Where money goes</span>
       </div>
       <div class="card" id="home-categories"></div>
-
       <div class="section-header">
         <span class="section-title">Recent</span>
         <button class="section-link" onclick="switchTab('history')">See all</button>
       </div>
       <div id="home-recent"></div>
     </div>
-
-    <button class="fab" onclick="openAddExpense()">
-      <span class="fab-icon">＋</span> Add Expense
-    </button>
+    <button class="fab" onclick="openAddExpense()"><span class="fab-icon">＋</span> Add Expense</button>
   </div>
 
-  <!-- ═══════════════ ADD EXPENSE SCREEN ═══════════════ -->
+  <!-- ADD EXPENSE SCREEN -->
   <div class="screen" id="screen-add">
     <div class="appbar">
       <button class="appbar-back" onclick="closeAddExpense()">✕</button>
       <span class="appbar-title" id="add-title">Add Expense</span>
     </div>
-
     <div class="scroll-body" style="padding-bottom:20px;">
       <div class="form-section">
         <div class="form-label">AMOUNT</div>
@@ -699,17 +426,14 @@
           <input class="amount-input" type="number" id="inp-amount" placeholder="0" min="0" step="1">
         </div>
       </div>
-
       <div class="form-section">
         <div class="form-label">MERCHANT / PAID TO</div>
         <input class="text-input" type="text" id="inp-merchant" placeholder="e.g. Zomato, Rapido, Amazon" oninput="autocat()">
       </div>
-
       <div class="form-section">
         <div class="form-label" style="margin-bottom:12px;">CATEGORY</div>
         <div class="cat-chips" id="cat-chips"></div>
       </div>
-
       <div class="form-section">
         <div class="form-label">DATE</div>
         <div class="date-row">
@@ -717,47 +441,37 @@
           <input type="date" id="inp-date">
         </div>
       </div>
-
       <div class="form-section">
         <div class="form-label">NOTE (OPTIONAL)</div>
         <input class="text-input" type="text" id="inp-note" placeholder="Add a note...">
       </div>
-
       <div style="margin: 0 16px;">
         <button class="save-btn" id="save-btn" onclick="saveExpense()">Save Expense</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════ HISTORY SCREEN ═══════════════ -->
+  <!-- HISTORY SCREEN -->
   <div class="screen" id="screen-history">
     <div class="appbar" style="padding-bottom:12px;">
       <span class="appbar-title">All Transactions</span>
     </div>
-
     <div class="search-box">
       <span class="search-icon">🔍</span>
       <input class="search-input" id="history-search" type="text" placeholder="Search transactions..." oninput="renderHistory(this.value)">
     </div>
-
-    <!-- Pull to refresh indicator -->
-    <div id="pull-indicator" style="text-align:center;padding:8px;font-size:12px;color:#888780;display:none;">
-      ↓ Pull down to refresh
-    </div>
-
+    <div id="pull-indicator" style="text-align:center;padding:8px;font-size:12px;color:#888780;display:none;">↓ Pull down to refresh</div>
     <div class="scroll-body" id="history-scroll" style="padding-top:4px;" onscroll="handleHistoryScroll(this)">
       <div id="history-list"></div>
     </div>
   </div>
 
-  <!-- ═══════════════ CHARTS SCREEN ═══════════════ -->
+  <!-- CHARTS SCREEN -->
   <div class="screen" id="screen-charts">
     <div class="appbar" style="padding-bottom:12px;">
       <span class="appbar-title">Analytics</span>
     </div>
-
     <div class="scroll-body">
-      <!-- Period Selector -->
       <div style="padding:12px 16px 4px;">
         <div style="display:flex;gap:8px;">
           <button class="period-btn active" id="period-7" onclick="setPeriod(7)">7 Days</button>
@@ -766,8 +480,7 @@
           <button class="period-btn" id="period-365" onclick="setPeriod(365)">This Year</button>
         </div>
       </div>
-
-      <div class="chart-header" style="border-radius:0; background:var(--primary); margin:8px 16px 12px; border-radius:16px; padding:16px;">
+      <div class="chart-header" style="background:var(--primary);margin:8px 16px 12px;border-radius:16px;padding:16px;">
         <div>
           <div class="chart-month" id="chart-month-label"></div>
           <div class="chart-total" id="chart-total">₹0</div>
@@ -777,14 +490,12 @@
           <div class="chart-count" id="chart-count">0</div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-title" id="bar-chart-title">Daily Spending</div>
         <div style="height:180px;width:100%;position:relative;">
           <canvas id="bar-chart" style="display:block;width:100%;height:180px;"></canvas>
         </div>
       </div>
-
       <div class="card" id="pie-section">
         <div class="card-title">By category</div>
         <div style="height:200px;width:100%;position:relative;display:flex;justify-content:center;">
@@ -795,115 +506,74 @@
     </div>
   </div>
 
-  <!-- ═══════════════ SETTINGS SCREEN ═══════════════ -->
+  <!-- SETTINGS SCREEN -->
   <div class="screen" id="screen-settings">
     <div class="appbar" style="padding-bottom:12px;">
       <span class="appbar-title">Settings</span>
     </div>
-
     <div class="scroll-body">
-
-      <!-- PROFILE -->
       <div class="settings-section-title">Profile</div>
       <div class="settings-card">
         <div class="settings-row" onclick="openProfilePage()" style="cursor:pointer;">
           <div class="settings-icon">👤</div>
-          <div class="settings-info">
-            <div class="settings-label">My Profile</div>
-            <div class="settings-sub">Update your name</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">My Profile</div><div class="settings-sub">Update your name</div></div>
           <span class="settings-arrow">›</span>
         </div>
       </div>
-
-      <!-- NOTIFICATIONS -->
       <div class="settings-section-title">Notifications</div>
       <div class="settings-card">
         <div class="settings-row" onclick="openNotifPage()" style="cursor:pointer;">
           <div class="settings-icon">🔔</div>
-          <div class="settings-info">
-            <div class="settings-label">Notifications</div>
-            <div class="settings-sub" id="notif-summary-sub">Manage alerts & reminders</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Notifications</div><div class="settings-sub" id="notif-summary-sub">Manage alerts & reminders</div></div>
           <span class="settings-arrow">›</span>
         </div>
       </div>
-
-      <!-- BUDGET -->
       <div class="settings-section-title">Budget</div>
       <div class="settings-card">
         <div class="settings-row" onclick="openBudgetPage()" style="cursor:pointer;">
           <div class="settings-icon">💰</div>
-          <div class="settings-info">
-            <div class="settings-label">Budget & Limits</div>
-            <div class="settings-sub" id="budget-summary-sub">Set up monthly budget & daily limit</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Budget & Limits</div><div class="settings-sub" id="budget-summary-sub">Set up monthly budget & daily limit</div></div>
           <span class="settings-arrow">›</span>
         </div>
       </div>
-
-      <!-- DATA -->
       <div class="settings-section-title">Data</div>
       <div class="settings-card">
         <div class="settings-row" onclick="exportCSV()">
           <div class="settings-icon">📊</div>
-          <div class="settings-info">
-            <div class="settings-label">Export to Excel</div>
-            <div class="settings-sub">Download all transactions as Excel file</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Export to Excel</div><div class="settings-sub">Download all transactions as Excel file</div></div>
           <span class="settings-arrow">›</span>
         </div>
         <div class="settings-row" onclick="clearAllData()">
           <div class="settings-icon">🗑️</div>
-          <div class="settings-info">
-            <div class="settings-label">Clear All Data</div>
-            <div class="settings-sub">Permanently delete all transactions</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Clear All Data</div><div class="settings-sub">Permanently delete all transactions</div></div>
           <span class="settings-arrow">›</span>
         </div>
       </div>
-
-      <!-- COMING SOON -->
       <div class="settings-section-title">Coming Soon</div>
       <div class="settings-card">
         <div class="settings-row">
           <div class="settings-icon">⚡</div>
-          <div class="settings-info">
-            <div class="settings-label">Auto UPI Tracking</div>
-            <div class="settings-sub">Auto-detect GPay, PhonePe, Paytm payments</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Auto UPI Tracking</div><div class="settings-sub">Auto-detect GPay, PhonePe, Paytm payments</div></div>
           <button class="toggle" disabled style="opacity:0.4;cursor:not-allowed;"></button>
         </div>
       </div>
-
-      <!-- ABOUT -->
       <div class="settings-section-title">About</div>
       <div class="settings-card">
         <div class="settings-row" onclick="rateApp()">
           <div class="settings-icon">⭐</div>
-          <div class="settings-info">
-            <div class="settings-label">Rate SpendSmart</div>
-            <div class="settings-sub">Help us grow on Play Store</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Rate SpendSmart</div><div class="settings-sub">Help us grow on Play Store</div></div>
           <span class="settings-arrow">›</span>
         </div>
         <div class="settings-row" onclick="openPrivacyPage()" style="cursor:pointer;">
           <div class="settings-icon">🔒</div>
-          <div class="settings-info">
-            <div class="settings-label">Privacy Policy</div>
-            <div class="settings-sub">How we handle your data</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Privacy Policy</div><div class="settings-sub">How we handle your data</div></div>
           <span class="settings-arrow">›</span>
         </div>
         <div class="settings-row">
           <div class="settings-icon">ℹ️</div>
-          <div class="settings-info">
-            <div class="settings-label">SpendSmart</div>
-            <div class="settings-sub">Version 1.0.0</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">SpendSmart</div><div class="settings-sub">Version 1.0.0</div></div>
         </div>
       </div>
-
       <div class="privacy-banner">
         <span class="privacy-icon">🔒</span>
         <div class="privacy-text">100% private. All your expense data is stored only on your device. We never upload or share your financial data.</div>
@@ -911,58 +581,43 @@
     </div>
   </div>
 
-  <!-- ═══════════════ NOTIFICATIONS SCREEN ═══════════════ -->
+  <!-- NOTIFICATIONS SCREEN -->
   <div class="screen" id="screen-notif">
     <div class="appbar" style="padding-bottom:12px;">
       <button class="appbar-back" onclick="closeNotifPage()">←</button>
       <span class="appbar-title">Notifications</span>
     </div>
-
     <div class="scroll-body">
       <div class="settings-section-title">Reminders</div>
       <div class="settings-card">
         <div class="settings-row">
           <div class="settings-icon">🌙</div>
-          <div class="settings-info">
-            <div class="settings-label">Daily Reminder</div>
-            <div class="settings-sub">Get reminded to log expenses every day</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Daily Reminder</div><div class="settings-sub">Get reminded to log expenses every day</div></div>
           <button class="toggle" id="toggle-daily" onclick="toggleNotifType('daily')"></button>
         </div>
         <div class="settings-row">
           <div class="settings-icon">📊</div>
-          <div class="settings-info">
-            <div class="settings-label">Weekly Summary</div>
-            <div class="settings-sub">Receive your weekly spending summary every Sunday</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Weekly Summary</div><div class="settings-sub">Receive your weekly spending summary every Sunday</div></div>
           <button class="toggle" id="toggle-weekly" onclick="toggleNotifType('weekly')"></button>
         </div>
       </div>
-
       <div class="settings-section-title">Budget Alerts</div>
       <div class="settings-card">
         <div class="settings-row">
           <div class="settings-icon">💰</div>
-          <div class="settings-info">
-            <div class="settings-label">Monthly Budget Alert</div>
-            <div class="settings-sub">Alert when monthly budget is 80% used</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Monthly Budget Alert</div><div class="settings-sub">Alert when monthly budget is 80% used</div></div>
           <button class="toggle" id="toggle-budget" onclick="toggleNotifType('budget')"></button>
         </div>
         <div class="settings-row">
           <div class="settings-icon">📅</div>
-          <div class="settings-info">
-            <div class="settings-label">Daily Limit Alert</div>
-            <div class="settings-sub">Alert when daily spending limit exceeded</div>
-          </div>
+          <div class="settings-info"><div class="settings-label">Daily Limit Alert</div><div class="settings-sub">Alert when daily spending limit exceeded</div></div>
           <button class="toggle" id="toggle-dailylimit" onclick="toggleNotifType('dailylimit')"></button>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- ═══════════════ PROFILE SCREEN ═══════════════ -->
+  <!-- PROFILE SCREEN -->
   <div class="screen" id="screen-profile">
     <div class="appbar" style="padding-bottom:12px;">
       <button class="appbar-back" onclick="closeProfilePage()">←</button>
@@ -974,14 +629,10 @@
         <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;width:100%">
             <div class="settings-icon">👤</div>
-            <div class="settings-info">
-              <div class="settings-label">Your Name</div>
-              <div class="settings-sub">Shows in greeting on home screen</div>
-            </div>
+            <div class="settings-info"><div class="settings-label">Your Name</div><div class="settings-sub">Shows in greeting on home screen</div></div>
           </div>
           <div style="display:flex;gap:8px;width:100%">
-            <input class="budget-inp" type="text" id="inp-profile-name" placeholder="Enter your name" maxlength="20"
-              style="flex:1;background:var(--bg);border-radius:10px;padding:10px 14px;border:none;outline:none;font-family:Nunito,sans-serif;font-size:14px;font-weight:600;">
+            <input class="budget-inp" type="text" id="inp-profile-name" placeholder="Enter your name" maxlength="20" style="flex:1;background:var(--bg);border-radius:10px;padding:10px 14px;border:none;outline:none;font-family:Nunito,sans-serif;font-size:14px;font-weight:600;">
             <button class="set-btn" onclick="saveProfileName()">Save</button>
           </div>
         </div>
@@ -989,54 +640,39 @@
     </div>
   </div>
 
-  <!-- ═══════════════ BUDGET SCREEN ═══════════════ -->
+  <!-- BUDGET SCREEN -->
   <div class="screen" id="screen-budget">
     <div class="appbar" style="padding-bottom:12px;">
       <button class="appbar-back" onclick="closeBudgetPage()">←</button>
       <span class="appbar-title">Budget & Limits</span>
     </div>
-
     <div class="scroll-body">
       <div class="settings-section-title">Monthly</div>
       <div class="settings-card">
         <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;width:100%">
             <div class="settings-icon">💰</div>
-            <div class="settings-info">
-              <div class="settings-label">Monthly Budget</div>
-              <div class="settings-sub">Warning shown when you exceed limit</div>
-            </div>
+            <div class="settings-info"><div class="settings-label">Monthly Budget</div><div class="settings-sub">Warning shown when you exceed limit</div></div>
           </div>
           <div style="display:flex;gap:8px;width:100%">
-            <div class="budget-input-wrap" style="flex:1">
-              <span class="budget-prefix">₹</span>
-              <input class="budget-inp" type="number" id="inp-monthly-budget" placeholder="e.g. 15000">
-            </div>
+            <div class="budget-input-wrap" style="flex:1"><span class="budget-prefix">₹</span><input class="budget-inp" type="number" id="inp-monthly-budget" placeholder="e.g. 15000"></div>
             <button class="set-btn" onclick="saveBudget()">Set</button>
           </div>
         </div>
       </div>
-
       <div class="settings-section-title">Daily</div>
       <div class="settings-card">
         <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;width:100%">
             <div class="settings-icon">📅</div>
-            <div class="settings-info">
-              <div class="settings-label">Daily Spending Limit</div>
-              <div class="settings-sub">Alert when daily spending exceeds this</div>
-            </div>
+            <div class="settings-info"><div class="settings-label">Daily Spending Limit</div><div class="settings-sub">Alert when daily spending exceeds this</div></div>
           </div>
           <div style="display:flex;gap:8px;width:100%">
-            <div class="budget-input-wrap" style="flex:1">
-              <span class="budget-prefix">₹</span>
-              <input class="budget-inp" type="number" id="inp-daily-limit" placeholder="e.g. 500">
-            </div>
+            <div class="budget-input-wrap" style="flex:1"><span class="budget-prefix">₹</span><input class="budget-inp" type="number" id="inp-daily-limit" placeholder="e.g. 500"></div>
             <button class="set-btn" onclick="saveDailyLimit()">Set</button>
           </div>
         </div>
       </div>
-
       <div class="privacy-banner" style="margin-top:8px;">
         <span class="privacy-icon">💡</span>
         <div class="privacy-text">Set a monthly budget to track if you're overspending. Daily limit helps control day-to-day expenses.</div>
@@ -1044,7 +680,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════ ACTION SHEET ═══════════════ -->
+  <!-- ACTION SHEET -->
   <div class="action-overlay" id="action-overlay" onclick="closeActionSheet(event)">
     <div class="action-sheet" id="action-sheet">
       <div class="action-handle"></div>
@@ -1052,68 +688,50 @@
         <div class="action-merchant" id="action-merchant"></div>
         <div class="action-amount" id="action-amount"></div>
       </div>
-      <button class="action-btn" onclick="editTxnFromSheet()">
-        <span class="action-btn-icon">✏️</span>
-        <span class="action-btn-label">Edit Expense</span>
-      </button>
-      <button class="action-btn danger" onclick="deleteTxnFromSheet()">
-        <span class="action-btn-icon">🗑️</span>
-        <span class="action-btn-label">Delete Expense</span>
-      </button>
-      <button class="action-cancel" onclick="closeActionSheet()">Cancel</button>
+      <button class="action-btn" onclick="editTxnFromSheet()"><span class="action-btn-icon">✏️</span><span class="action-btn-label">Edit Expense</span></button>
+      <button class="action-btn danger" onclick="deleteTxnFromSheet()"><span class="action-btn-icon">🗑️</span><span class="action-btn-label">Delete Expense</span></button>
+      <button class="action-cancel" onclick="closeActionSheetDirect()">Cancel</button>
     </div>
   </div>
 
-  <!-- ═══════════════ PRIVACY POLICY SCREEN ═══════════════ -->
+  <!-- PRIVACY POLICY SCREEN -->
   <div class="screen" id="screen-privacy">
     <div class="appbar" style="padding-bottom:12px;">
       <button class="appbar-back" onclick="closePrivacyPage()">←</button>
       <span class="appbar-title">Privacy Policy</span>
     </div>
     <div class="scroll-body" style="padding:16px;">
-
       <div class="settings-card" style="margin:0 0 12px;padding:16px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:24px;">🔒</span>
-          <div>
-            <div style="font-size:14px;font-weight:800;color:#2C2C2A;">100% Private</div>
-            <div style="font-size:12px;color:#0F6E56;">Your data never leaves your device</div>
-          </div>
+          <div><div style="font-size:14px;font-weight:800;color:#2C2C2A;">100% Private</div><div style="font-size:12px;color:#0F6E56;">Your data never leaves your device</div></div>
         </div>
       </div>
-
       <div class="settings-card" style="margin:0 0 12px;padding:16px;">
         <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">What We Store</div>
         <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">SpendSmart stores your expense data, budget settings, and preferences locally on your device only. All data remains on your phone at all times.</div>
       </div>
-
       <div class="settings-card" style="margin:0 0 12px;padding:16px;">
         <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">What We Don't Collect</div>
         <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">We do not collect your name, email, phone number, bank details, or UPI credentials. We do not track your location. We do not share data with third parties. We do not display advertisements.</div>
       </div>
-
       <div class="settings-card" style="margin:0 0 12px;padding:16px;">
         <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">Notifications</div>
         <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">Notifications are generated locally on your device. No data is sent to any server for notifications.</div>
       </div>
-
       <div class="settings-card" style="margin:0 0 12px;padding:16px;">
         <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">Data Deletion</div>
         <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">You can delete all data anytime via Settings → Data → Clear All Data. Uninstalling the app also removes all data permanently.</div>
       </div>
-
       <div class="settings-card" style="margin:0 0 12px;padding:16px;">
         <div style="font-size:14px;font-weight:800;color:#0F6E56;margin-bottom:8px;">Contact</div>
         <div style="font-size:13px;color:#5F5E5A;line-height:1.7;">For questions about this privacy policy, please contact us via the email listed on our Play Store page.</div>
       </div>
-
-      <div style="text-align:center;font-size:12px;color:#B4B2A9;padding:16px 0;">
-        Last updated: May 2026 • SpendSmart v1.0.0
-      </div>
+      <div style="text-align:center;font-size:12px;color:#B4B2A9;padding:16px 0;">Last updated: May 2026 • SpendSmart v1.0.0</div>
     </div>
   </div>
 
-  <!-- ═══════════════ FIRST TIME GUIDE ═══════════════ -->
+  <!-- FIRST TIME GUIDE -->
   <div id="guide-overlay" style="display:none;" class="guide-overlay">
     <div class="guide-card">
       <div class="guide-dots" id="guide-dots"></div>
@@ -1125,24 +743,12 @@
     </div>
   </div>
 
-  <!-- ═══════════════ BOTTOM NAV ═══════════════ -->
+  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="nav-item active" id="nav-home" onclick="switchTab('home')">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">Home</span>
-    </button>
-    <button class="nav-item" id="nav-history" onclick="switchTab('history')">
-      <span class="nav-icon">🧾</span>
-      <span class="nav-label">History</span>
-    </button>
-    <button class="nav-item" id="nav-charts" onclick="switchTab('charts')">
-      <span class="nav-icon">📊</span>
-      <span class="nav-label">Charts</span>
-    </button>
-    <button class="nav-item" id="nav-settings" onclick="switchTab('settings')">
-      <span class="nav-icon">⚙️</span>
-      <span class="nav-label">Settings</span>
-    </button>
+    <button class="nav-item active" id="nav-home" onclick="switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+    <button class="nav-item" id="nav-history" onclick="switchTab('history')"><span class="nav-icon">🧾</span><span class="nav-label">History</span></button>
+    <button class="nav-item" id="nav-charts" onclick="switchTab('charts')"><span class="nav-icon">📊</span><span class="nav-label">Charts</span></button>
+    <button class="nav-item" id="nav-settings" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></button>
   </nav>
 </div>
 
@@ -1151,18 +757,12 @@
 <script>
 'use strict';
 
-// ══════════════════════════════════════════
-//  CONSTANTS & STORAGE KEYS
-// ══════════════════════════════════════════
 const STORAGE_KEY  = 'spendsmart_txns';
 const BUDGET_KEY   = 'spendsmart_budget';
 const DAILY_KEY    = 'spendsmart_daily';
 const NAME_KEY     = 'spendsmart_name';
 const NOTIF_KEY_PREFIX = 'spendsmart_notif_';
 
-// ══════════════════════════════════════════
-//  CATEGORIES
-// ══════════════════════════════════════════
 const CATEGORIES = [
   { name:'Food & Dining',    icon:'🍔', color:'#E8574A', keywords:['zomato','swiggy','dominos','pizza','burger','restaurant','cafe','food','biryani','hotel','kfc','mcdonalds','starbucks','dunkin','subway','eat','lunch','dinner','breakfast','snack','chai','dosa','idli'] },
   { name:'Travel',           icon:'🚗', color:'#378ADD', keywords:['ola','uber','rapido','metro','irctc','redbus','taxi','cab','train','flight','bus ticket','petrol','diesel','fuel','parking','toll','indigo','airindia','makemytrip'] },
@@ -1181,30 +781,12 @@ function getCategoryForMerchant(merchant) {
   }
   return 'Other';
 }
+function getCatMeta(name) { return CATEGORIES.find(c => c.name === name) || CATEGORIES[CATEGORIES.length - 1]; }
 
-function getCatMeta(name) {
-  return CATEGORIES.find(c => c.name === name) || CATEGORIES[CATEGORIES.length - 1];
-}
-
-// ══════════════════════════════════════════
-//  DATA LAYER
-// ══════════════════════════════════════════
-function loadTxns() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-  catch(e) { return []; }
-}
-function saveTxns(txns) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(txns));
-}
-function addTxn(txn) {
-  const txns = loadTxns();
-  txn.id = Date.now();
-  txns.unshift(txn);
-  saveTxns(txns);
-}
-function deleteTxn(id) {
-  saveTxns(loadTxns().filter(t => t.id !== id));
-}
+function loadTxns() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; } }
+function saveTxns(txns) { localStorage.setItem(STORAGE_KEY, JSON.stringify(txns)); }
+function addTxn(txn) { const txns = loadTxns(); txn.id = Date.now(); txns.unshift(txn); saveTxns(txns); }
+function deleteTxn(id) { saveTxns(loadTxns().filter(t => t.id !== id)); }
 function loadBudget() { return parseFloat(localStorage.getItem(BUDGET_KEY)) || 0; }
 function loadDailyLimit() { return parseFloat(localStorage.getItem(DAILY_KEY)) || 0; }
 function loadUsername() { return localStorage.getItem(NAME_KEY) || ''; }
@@ -1212,16 +794,10 @@ function isNotifEnabled(type) { return localStorage.getItem(NOTIF_KEY_PREFIX + t
 function setNotifEnabled(type, val) { localStorage.setItem(NOTIF_KEY_PREFIX + type, val ? '1' : '0'); }
 function anyNotifEnabled() { return ['daily','weekly','budget','dailylimit'].some(t => isNotifEnabled(t)); }
 
-// ══════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════
-function fmt(n) {
-  return '₹' + Math.round(n).toLocaleString('en-IN');
-}
+function fmt(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
 function fmtDate(iso) {
   try {
-    const d = new Date(iso);
-    const now = new Date();
+    const d = new Date(iso), now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const diff = (today - dd) / 86400000;
@@ -1232,8 +808,7 @@ function fmtDate(iso) {
 }
 function groupKey(iso) {
   try {
-    const d = new Date(iso);
-    const now = new Date();
+    const d = new Date(iso), now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const diff = (today - dd) / 86400000;
@@ -1245,35 +820,24 @@ function groupKey(iso) {
 function showToast(msg) {
   const t = document.getElementById('toast');
   if (!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 function el(id) { return document.getElementById(id); }
 function setHTML(id, html) { const e = el(id); if (e) e.innerHTML = html; }
 function setText(id, text) { const e = el(id); if (e) e.textContent = text; }
 
-// ══════════════════════════════════════════
-//  SEED SAMPLE DATA
-// ══════════════════════════════════════════
-function seedIfEmpty() {
-  // No sample data — users start fresh
-}
+function seedIfEmpty() { /* No sample data */ }
 
-// ══════════════════════════════════════════
-//  NAVIGATION
-// ══════════════════════════════════════════
 let currentTab = 'home';
 let barChartInstance = null;
 let pieChartInstance = null;
-let chartsRendered = false;
 let currentPeriod = 7;
 
 function switchTab(tab) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const screen = el('screen-' + tab);
-  const nav = el('nav-' + tab);
+  const screen = el('screen-' + tab), nav = el('nav-' + tab);
   if (screen) screen.classList.add('active');
   if (nav) nav.classList.add('active');
   currentTab = tab;
@@ -1282,53 +846,36 @@ function switchTab(tab) {
   if (tab === 'charts') {
     currentPeriod = 7;
     document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-    const b7 = el('period-7');
-    if (b7) b7.classList.add('active');
+    const b7 = el('period-7'); if (b7) b7.classList.add('active');
     setTimeout(() => renderCharts(), 200);
   }
   if (tab === 'settings') loadSettingsValues();
 }
 
-// ══════════════════════════════════════════
-//  HOME
-// ══════════════════════════════════════════
 function renderHome() {
-  const txns = loadTxns();
-  const now = new Date();
+  const txns = loadTxns(), now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  // Greeting
-  const h = now.getHours();
-  const name = loadUsername();
+  const h = now.getHours(), name = loadUsername();
   const timeGreet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   const emoji = h < 12 ? '☀️' : h < 17 ? '👋' : '🌙';
   setText('greeting', name ? `${timeGreet}, ${name}! ${emoji}` : `${timeGreet} ${emoji}`);
-  const avatar = el('user-avatar');
-  if (avatar) avatar.textContent = name ? name[0].toUpperCase() : 'S';
+  const avatar = el('user-avatar'); if (avatar) avatar.textContent = name ? name[0].toUpperCase() : 'S';
 
-  // Month filter
-  const monthTxns = txns.filter(t => {
-    const d = new Date(t.date);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-  const monthTotal = monthTxns.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const monthTxns = txns.filter(t => { const d = new Date(t.date); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); });
+  const monthTotal = monthTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
   const todayTxns = txns.filter(t => new Date(t.date) >= today);
-  const todayTotal = todayTxns.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const todayTotal = todayTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
 
   setText('home-total', fmt(monthTotal));
   setText('home-today', fmt(todayTotal));
   setText('home-count', String(monthTxns.length));
-  setText('home-month', now.toLocaleDateString('en-IN', {month:'long', year:'numeric'}) + ' • ' + monthTxns.length + ' transactions');
+  setText('home-month', now.toLocaleDateString('en-IN',{month:'long',year:'numeric'}) + ' • ' + monthTxns.length + ' transactions');
 
-  // Budget banner
-  const budget = loadBudget();
-  const bannerEl = el('budget-banner');
+  const budget = loadBudget(), bannerEl = el('budget-banner');
   if (bannerEl) {
-    if (!budget) {
-      bannerEl.style.display = 'none';
-    } else {
-      const pct = Math.round((monthTotal / budget) * 100);
-      const remaining = budget - monthTotal;
+    if (!budget) { bannerEl.style.display = 'none'; }
+    else {
+      const pct = Math.round((monthTotal/budget)*100), remaining = budget - monthTotal;
       let cls, icon, msg;
       if (pct >= 100) { cls='danger'; icon='🚨'; msg=`Budget exceeded by ${fmt(Math.abs(remaining))}!`; }
       else if (pct >= 80) { cls='warning'; icon='⚠️'; msg=`${pct}% of budget used. Only ${fmt(remaining)} left!`; }
@@ -1338,85 +885,59 @@ function renderHome() {
     }
   }
 
-  // Daily limit check
   const limit = loadDailyLimit();
-  if (limit && todayTotal > limit) {
-    showToast(`🔔 Daily limit exceeded by ${fmt(todayTotal - limit)}!`);
-  }
+  if (limit && todayTotal > limit) showToast(`🔔 Daily limit exceeded by ${fmt(todayTotal-limit)}!`);
 
-  // Month comparison
   renderComparison(monthTotal);
 
-  // Categories
   const catTotals = {};
-  monthTxns.forEach(t => {
-    const k = t.category || 'Other';
-    catTotals[k] = (catTotals[k] || 0) + (Number(t.amount) || 0);
-  });
+  monthTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
   const catEl = el('home-categories');
   if (catEl) {
-    const entries = Object.entries(catTotals).sort((a,b) => b[1]-a[1]).slice(0,4);
+    const entries = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,4);
     if (entries.length === 0) {
       catEl.innerHTML = '<div style="text-align:center;padding:20px;color:#888780;font-size:13px;">No expenses yet this month</div>';
     } else {
-      catEl.innerHTML = entries.map(([cat, amt]) => {
-        const meta = getCatMeta(cat);
-        const pct = monthTotal > 0 ? Math.round((amt/monthTotal)*100) : 0;
+      catEl.innerHTML = entries.map(([cat,amt]) => {
+        const meta = getCatMeta(cat), pct = monthTotal>0?Math.round((amt/monthTotal)*100):0;
         return `<div class="cat-row"><div class="cat-info"><div class="cat-left">${meta.icon} <span>${cat}</span></div><div class="cat-amount">${fmt(amt)}</div></div><div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${meta.color}"></div></div></div>`;
       }).join('');
     }
   }
 
-  // Recent
   const recentEl = el('home-recent');
   if (recentEl) {
-    const sorted = txns.slice().sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,5);
-    if (sorted.length === 0) {
-      recentEl.innerHTML = `<div style="text-align:center;padding:32px 16px;"><div style="font-size:48px;margin-bottom:12px;">💸</div><div style="font-size:15px;font-weight:700;color:#2C2C2A;">No transactions yet</div><div style="font-size:12px;color:#888780;margin-top:6px;">Tap + Add Expense to start</div></div>`;
-    } else {
-      recentEl.innerHTML = sorted.map(t => txnTileHTML(t)).join('');
-    }
+    const sorted = txns.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+    recentEl.innerHTML = sorted.length === 0
+      ? `<div style="text-align:center;padding:32px 16px;"><div style="font-size:48px;margin-bottom:12px;">💸</div><div style="font-size:15px;font-weight:700;color:#2C2C2A;">No transactions yet</div><div style="font-size:12px;color:#888780;margin-top:6px;">Tap + Add Expense to start</div></div>`
+      : sorted.map(t => txnTileHTML(t)).join('');
   }
 }
 
 function txnTileHTML(t) {
-  const meta = getCatMeta(t.category || 'Other');
+  const meta = getCatMeta(t.category||'Other');
   return `<div class="txn-tile" id="txn-${t.id}" onclick="openActionSheet(${t.id})">
     <div class="txn-icon" style="background:${meta.color}22">${meta.icon}</div>
-    <div class="txn-info">
-      <div class="txn-merchant">${t.merchant || ''}</div>
-      <div class="txn-meta">${t.category || 'Other'} • ${fmtDate(t.date)}</div>
-    </div>
-    <div class="txn-right">
-      <div class="txn-amount">−${fmt(t.amount)}</div>
-      <div class="upi-badge">${t.source === 'sample' ? 'SAMPLE' : 'UPI'}</div>
-    </div>
+    <div class="txn-info"><div class="txn-merchant">${t.merchant||''}</div><div class="txn-meta">${t.category||'Other'} • ${fmtDate(t.date)}</div></div>
+    <div class="txn-right"><div class="txn-amount">−${fmt(t.amount)}</div><div class="upi-badge">${t.source==='sample'?'SAMPLE':'UPI'}</div></div>
   </div>`;
 }
 
-// ══════════════════════════════════════════
-//  MONTH COMPARISON
-// ══════════════════════════════════════════
 function renderComparison(thisMonthTotal) {
-  const compareEl = el('compare-section');
-  if (!compareEl) return;
-  const txns = loadTxns();
-  const now = new Date();
+  const compareEl = el('compare-section'); if (!compareEl) return;
+  const txns = loadTxns(), now = new Date();
   const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const lastMonthTxns = txns.filter(t => {
-    const d = new Date(t.date);
-    return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
-  });
-  const lastTotal = lastMonthTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
-  if (lastTotal === 0) { compareEl.style.display = 'none'; return; }
-  const maxVal = Math.max(thisMonthTotal, lastTotal);
-  const thisPct = maxVal > 0 ? Math.round((thisMonthTotal/maxVal)*100) : 0;
-  const lastPct = maxVal > 0 ? Math.round((lastTotal/maxVal)*100) : 0;
-  const diff = thisMonthTotal - lastTotal;
-  const diffPct = lastTotal > 0 ? Math.abs(Math.round((diff/lastTotal)*100)) : 0;
+  const lastMonthTxns = txns.filter(t => { const d=new Date(t.date); return d.getMonth()===lastMonth.getMonth()&&d.getFullYear()===lastMonth.getFullYear(); });
+  const lastTotal = lastMonthTxns.reduce((s,t)=>s+(Number(t.amount)||0),0);
+  if (lastTotal===0) { compareEl.style.display='none'; return; }
+  const maxVal = Math.max(thisMonthTotal,lastTotal);
+  const thisPct = maxVal>0?Math.round((thisMonthTotal/maxVal)*100):0;
+  const lastPct = maxVal>0?Math.round((lastTotal/maxVal)*100):0;
+  const diff = thisMonthTotal-lastTotal;
+  const diffPct = lastTotal>0?Math.abs(Math.round((diff/lastTotal)*100)):0;
   let diffCls, diffMsg;
-  if (diff > 0) { diffCls='up'; diffMsg=`📈 Spent ${fmt(Math.abs(diff))} (${diffPct}%) MORE than last month`; }
-  else if (diff < 0) { diffCls='down'; diffMsg=`📉 Spent ${fmt(Math.abs(diff))} (${diffPct}%) LESS — Great job!`; }
+  if (diff>0) { diffCls='up'; diffMsg=`📈 Spent ${fmt(Math.abs(diff))} (${diffPct}%) MORE than last month`; }
+  else if (diff<0) { diffCls='down'; diffMsg=`📉 Spent ${fmt(Math.abs(diff))} (${diffPct}%) LESS — Great job!`; }
   else { diffCls='same'; diffMsg='Same spending as last month'; }
   const thisName = now.toLocaleDateString('en-IN',{month:'short'});
   const lastName = lastMonth.toLocaleDateString('en-IN',{month:'short'});
@@ -1424,595 +945,424 @@ function renderComparison(thisMonthTotal) {
   compareEl.innerHTML = `<div class="compare-card"><div class="compare-title">📊 Month vs Month</div><div class="compare-row"><div class="compare-month">${thisName}</div><div class="compare-bar-wrap"><div class="compare-bar-fill" style="width:${thisPct}%;background:#0F6E56"><span class="compare-bar-amt">${fmt(thisMonthTotal)}</span></div></div></div><div class="compare-row"><div class="compare-month">${lastName}</div><div class="compare-bar-wrap"><div class="compare-bar-fill" style="width:${lastPct}%;background:#888780"><span class="compare-bar-amt">${fmt(lastTotal)}</span></div></div></div><div class="compare-diff ${diffCls}">${diffMsg}</div></div>`;
 }
 
-// ══════════════════════════════════════════
-//  ACTION SHEET
-// ══════════════════════════════════════════
 let actionTxnId = null;
-
 function openActionSheet(id) {
-  const txns = loadTxns();
-  const t = txns.find(t => t.id === id);
-  if (!t) return;
+  const t = loadTxns().find(t=>t.id===id); if (!t) return;
   actionTxnId = id;
-  setText('action-merchant', t.merchant || '');
-  setText('action-amount', `−${fmt(t.amount)} • ${t.category || 'Other'}`);
-  const overlay = el('action-overlay');
-  if (overlay) overlay.classList.add('show');
+  setText('action-merchant', t.merchant||'');
+  setText('action-amount', `−${fmt(t.amount)} • ${t.category||'Other'}`);
+  const overlay = el('action-overlay'); if (overlay) overlay.classList.add('show');
 }
-function closeActionSheet(e) {
-  if (e && e.target !== el('action-overlay')) return;
-  closeActionSheetDirect();
-}
-function closeActionSheetDirect() {
-  const overlay = el('action-overlay');
-  if (overlay) overlay.classList.remove('show');
-  actionTxnId = null;
-}
+function closeActionSheet(e) { if (e && e.target!==el('action-overlay')) return; closeActionSheetDirect(); }
+function closeActionSheetDirect() { const overlay=el('action-overlay'); if (overlay) overlay.classList.remove('show'); actionTxnId=null; }
 function deleteTxnFromSheet() {
   if (!actionTxnId) return;
   if (!confirm('Delete this transaction?')) return;
-  deleteTxn(actionTxnId);
-  closeActionSheetDirect();
+  deleteTxn(actionTxnId); closeActionSheetDirect();
   showToast('Transaction deleted 🗑️');
   renderHome();
-  renderHistory(el('history-search') ? el('history-search').value : '');
+  renderHistory(el('history-search')?el('history-search').value:'');
 }
 function editTxnFromSheet() {
   if (!actionTxnId) return;
-  const t = loadTxns().find(t => t.id === actionTxnId);
-  if (!t) return;
-  closeActionSheetDirect();
-  openEditExpense(t);
+  const t = loadTxns().find(t=>t.id===actionTxnId); if (!t) return;
+  closeActionSheetDirect(); openEditExpense(t);
 }
 
-// ══════════════════════════════════════════
-//  ADD / EDIT EXPENSE
-// ══════════════════════════════════════════
-let editingId = null;
-let selectedCategory = 'Food & Dining';
+let editingId = null, selectedCategory = 'Food & Dining';
 
 function openAddExpense() {
-  editingId = null;
-  selectedCategory = 'Food & Dining';
-  const amtEl = el('inp-amount'); if (amtEl) amtEl.value = '';
-  const merEl = el('inp-merchant'); if (merEl) merEl.value = '';
-  const noteEl = el('inp-note'); if (noteEl) noteEl.value = '';
-  const dateEl = el('inp-date'); if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
-  setText('add-title', 'Add Expense');
-  setText('save-btn', 'Save Expense');
+  editingId = null; selectedCategory = 'Food & Dining';
+  const amtEl=el('inp-amount'); if(amtEl) amtEl.value='';
+  const merEl=el('inp-merchant'); if(merEl) merEl.value='';
+  const noteEl=el('inp-note'); if(noteEl) noteEl.value='';
+  const dateEl=el('inp-date'); if(dateEl) dateEl.value=new Date().toISOString().split('T')[0];
+  setText('add-title','Add Expense'); setText('save-btn','Save Expense');
   renderCatChips();
   document.querySelector('.screen.active').classList.remove('active');
-  const addScreen = el('screen-add');
-  if (addScreen) addScreen.classList.add('active');
+  const addScreen=el('screen-add'); if(addScreen) addScreen.classList.add('active');
 }
 function openEditExpense(t) {
-  editingId = t.id;
-  selectedCategory = t.category || 'Food & Dining';
-  const amtEl = el('inp-amount'); if (amtEl) amtEl.value = t.amount;
-  const merEl = el('inp-merchant'); if (merEl) merEl.value = t.merchant || '';
-  const noteEl = el('inp-note'); if (noteEl) noteEl.value = t.note || '';
-  const dateEl = el('inp-date'); if (dateEl) dateEl.value = new Date(t.date).toISOString().split('T')[0];
-  setText('add-title', 'Edit Expense');
-  setText('save-btn', 'Update Expense');
+  editingId=t.id; selectedCategory=t.category||'Food & Dining';
+  const amtEl=el('inp-amount'); if(amtEl) amtEl.value=t.amount;
+  const merEl=el('inp-merchant'); if(merEl) merEl.value=t.merchant||'';
+  const noteEl=el('inp-note'); if(noteEl) noteEl.value=t.note||'';
+  const dateEl=el('inp-date'); if(dateEl) dateEl.value=new Date(t.date).toISOString().split('T')[0];
+  setText('add-title','Edit Expense'); setText('save-btn','Update Expense');
   renderCatChips();
   document.querySelector('.screen.active').classList.remove('active');
-  const addScreen = el('screen-add');
-  if (addScreen) addScreen.classList.add('active');
+  const addScreen=el('screen-add'); if(addScreen) addScreen.classList.add('active');
 }
 function closeAddExpense() {
-  const addScreen = el('screen-add');
-  if (addScreen) addScreen.classList.remove('active');
-  const mainScreen = el('screen-' + currentTab);
-  if (mainScreen) mainScreen.classList.add('active');
+  const addScreen=el('screen-add'); if(addScreen) addScreen.classList.remove('active');
+  const mainScreen=el('screen-'+currentTab); if(mainScreen) mainScreen.classList.add('active');
 }
 function renderCatChips() {
-  const chips = el('cat-chips');
-  if (!chips) return;
-  chips.innerHTML = CATEGORIES.map(cat => {
-    const on = cat.name === selectedCategory;
+  const chips=el('cat-chips'); if(!chips) return;
+  chips.innerHTML=CATEGORIES.map(cat => {
+    const on=cat.name===selectedCategory;
     return `<button class="cat-chip ${on?'selected':''}" style="${on?`border-color:${cat.color};background:${cat.color}22;color:${cat.color}`:''}" onclick="selectCat('${cat.name}')">${cat.icon} ${cat.name}</button>`;
   }).join('');
 }
-function selectCat(name) { selectedCategory = name; renderCatChips(); }
+function selectCat(name) { selectedCategory=name; renderCatChips(); }
 function autocat() {
-  const v = el('inp-merchant') ? el('inp-merchant').value : '';
-  const cat = getCategoryForMerchant(v);
-  if (cat !== 'Other') { selectedCategory = cat; renderCatChips(); }
+  const v=el('inp-merchant')?el('inp-merchant').value:'';
+  const cat=getCategoryForMerchant(v);
+  if(cat!=='Other') { selectedCategory=cat; renderCatChips(); }
 }
 function saveExpense() {
-  const amtEl = el('inp-amount'); const merEl = el('inp-merchant');
-  const noteEl = el('inp-note'); const dateEl = el('inp-date');
-  const amount = amtEl ? parseFloat(amtEl.value) : 0;
-  const merchant = merEl ? merEl.value.trim() : '';
-  const note = noteEl ? noteEl.value.trim() : '';
-  const dateStr = dateEl ? dateEl.value : '';
-  if (!amount || amount <= 0) { showToast('Enter a valid amount'); return; }
-  if (!merchant) { showToast('Enter merchant name'); return; }
-  const [y,m,d] = (dateStr || new Date().toISOString().split('T')[0]).split('-').map(Number);
-  const now = new Date();
-  const localDate = new Date(y, m-1, d, now.getHours(), now.getMinutes()).toISOString();
+  const amtEl=el('inp-amount'), merEl=el('inp-merchant'), noteEl=el('inp-note'), dateEl=el('inp-date');
+  const amount=amtEl?parseFloat(amtEl.value):0;
+  const merchant=merEl?merEl.value.trim():'';
+  const note=noteEl?noteEl.value.trim():'';
+  const dateStr=dateEl?dateEl.value:'';
+  if(!amount||amount<=0) { showToast('Enter a valid amount'); return; }
+  if(!merchant) { showToast('Enter merchant name'); return; }
+  const [y,m,d]=(dateStr||new Date().toISOString().split('T')[0]).split('-').map(Number);
+  const now=new Date();
+  const localDate=new Date(y,m-1,d,now.getHours(),now.getMinutes()).toISOString();
   if (editingId) {
-    const txns = loadTxns();
-    const idx = txns.findIndex(t => t.id === editingId);
-    if (idx !== -1) { txns[idx] = {...txns[idx], merchant, amount, category:selectedCategory, note, date:localDate}; saveTxns(txns); }
-    showToast('Updated! ✅');
-    editingId = null;
+    const txns=loadTxns(), idx=txns.findIndex(t=>t.id===editingId);
+    if(idx!==-1) { txns[idx]={...txns[idx],merchant,amount,category:selectedCategory,note,date:localDate}; saveTxns(txns); }
+    showToast('Updated! ✅'); editingId=null;
   } else {
-    addTxn({merchant, amount, category:selectedCategory, note, date:localDate, source:'manual'});
+    addTxn({merchant,amount,category:selectedCategory,note,date:localDate,source:'manual'});
     showToast('Saved! 💚');
+    // Update OneSignal tags after new expense
+    updateOneSignalTags();
   }
-  closeAddExpense();
-  renderHome();
-  renderHistory(el('history-search') ? el('history-search').value : '');
+  closeAddExpense(); renderHome();
+  renderHistory(el('history-search')?el('history-search').value:'');
 }
 
-// ══════════════════════════════════════════
-//  HISTORY
-// ══════════════════════════════════════════
-let pullStartY = 0;
-let isPulling = false;
+function updateOneSignalTags() {
+  try {
+    if (window.OneSignal && window.OneSignal.User) {
+      const txns = loadTxns(), now = new Date();
+      const weekStart = new Date(now.getTime() - 7*86400000);
+      const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
+      const weekTotal = weekTxns.reduce((s,t)=>s+(Number(t.amount)||0),0);
+      const catTotals = {};
+      weekTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
+      const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+      window.OneSignal.User.addTags({
+        user_name: loadUsername(),
+        week_total: String(Math.round(weekTotal)),
+        transaction_count: String(weekTxns.length),
+        top_category: topCat ? topCat[0] : 'None',
+        top_category_amount: topCat ? String(Math.round(topCat[1])) : '0',
+        last_active: now.toLocaleDateString('en-IN'),
+      });
+    }
+  } catch(e) {}
+}
 
+let pullStartY=0, isPulling=false;
 document.addEventListener('touchstart', e => {
-  const hs = el('history-scroll');
-  if (hs && hs.contains(e.target) && hs.scrollTop === 0) { pullStartY = e.touches[0].clientY; isPulling = true; }
-}, {passive:true});
+  const hs=el('history-scroll');
+  if(hs&&hs.contains(e.target)&&hs.scrollTop===0) { pullStartY=e.touches[0].clientY; isPulling=true; }
+},{passive:true});
 document.addEventListener('touchmove', e => {
-  if (!isPulling) return;
-  const dist = e.touches[0].clientY - pullStartY;
-  const ind = el('pull-indicator');
-  if (dist > 40 && ind) { ind.style.display='block'; ind.textContent = dist > 80 ? '↑ Release to refresh' : '↓ Pull to refresh'; }
-}, {passive:true});
+  if(!isPulling) return;
+  const dist=e.touches[0].clientY-pullStartY, ind=el('pull-indicator');
+  if(dist>40&&ind) { ind.style.display='block'; ind.textContent=dist>80?'↑ Release to refresh':'↓ Pull to refresh'; }
+},{passive:true});
 document.addEventListener('touchend', e => {
-  if (!isPulling) return;
-  const dist = e.changedTouches[0].clientY - pullStartY;
-  const ind = el('pull-indicator');
-  if (dist > 80) {
-    if (ind) ind.textContent = '✓ Refreshing...';
-    setTimeout(() => { renderHistory(el('history-search') ? el('history-search').value : ''); if (ind) ind.style.display='none'; showToast('Refreshed ✓'); }, 400);
-  } else { if (ind) ind.style.display='none'; }
-  isPulling = false; pullStartY = 0;
-}, {passive:true});
-
-function handleHistoryScroll(e) { const ind = el('pull-indicator'); if (e.scrollTop > 0 && ind) ind.style.display='none'; }
+  if(!isPulling) return;
+  const dist=e.changedTouches[0].clientY-pullStartY, ind=el('pull-indicator');
+  if(dist>80) {
+    if(ind) ind.textContent='✓ Refreshing...';
+    setTimeout(()=>{ renderHistory(el('history-search')?el('history-search').value:''); if(ind) ind.style.display='none'; showToast('Refreshed ✓'); },400);
+  } else { if(ind) ind.style.display='none'; }
+  isPulling=false; pullStartY=0;
+},{passive:true});
+function handleHistoryScroll(e) { const ind=el('pull-indicator'); if(e.scrollTop>0&&ind) ind.style.display='none'; }
 
 function renderHistory(search) {
-  search = search || '';
-  const txns = loadTxns();
-  const filtered = txns.filter(t =>
-    (t.merchant||'').toLowerCase().includes(search.toLowerCase()) ||
-    (t.category||'').toLowerCase().includes(search.toLowerCase())
-  ).sort((a,b) => new Date(b.date) - new Date(a.date));
-  const listEl = el('history-list');
-  if (!listEl) return;
-  if (filtered.length === 0) {
-    listEl.innerHTML = `<div style="text-align:center;padding:48px 24px;"><div style="font-size:56px;margin-bottom:16px;">${search ? '🔍' : '💸'}</div><div style="font-size:16px;font-weight:800;color:#2C2C2A;margin-bottom:8px;">${search ? 'No results found' : 'No transactions yet'}</div><div style="font-size:13px;color:#888780;">${search ? `Nothing matches "${search}"` : 'Tap + Add Expense to get started'}</div>${!search?'<button onclick="openAddExpense()" style="margin-top:20px;padding:12px 28px;background:#0F6E56;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">+ Add First Expense</button>':''}</div>`;
+  search=search||'';
+  const txns=loadTxns();
+  const filtered=txns.filter(t=>(t.merchant||'').toLowerCase().includes(search.toLowerCase())||(t.category||'').toLowerCase().includes(search.toLowerCase())).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const listEl=el('history-list'); if(!listEl) return;
+  if(filtered.length===0) {
+    listEl.innerHTML=`<div style="text-align:center;padding:48px 24px;"><div style="font-size:56px;margin-bottom:16px;">${search?'🔍':'💸'}</div><div style="font-size:16px;font-weight:800;color:#2C2C2A;margin-bottom:8px;">${search?'No results found':'No transactions yet'}</div><div style="font-size:13px;color:#888780;">${search?`Nothing matches "${search}"`:'Tap + Add Expense to get started'}</div>${!search?'<button onclick="openAddExpense()" style="margin-top:20px;padding:12px 28px;background:#0F6E56;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">+ Add First Expense</button>':''}</div>`;
     return;
   }
-  const groups = {};
-  filtered.forEach(t => { const k = groupKey(t.date); if (!groups[k]) groups[k]=[]; groups[k].push(t); });
-  listEl.innerHTML = Object.entries(groups).map(([key, ts]) => {
-    const dayTotal = ts.reduce((s,t) => s+(Number(t.amount)||0), 0);
-    return `<div class="day-header"><span class="day-label">${key}</span><span class="day-total">−${fmt(dayTotal)}</span></div>` + ts.map(t => txnTileHTML(t)).join('');
+  const groups={};
+  filtered.forEach(t=>{ const k=groupKey(t.date); if(!groups[k]) groups[k]=[]; groups[k].push(t); });
+  listEl.innerHTML=Object.entries(groups).map(([key,ts])=>{
+    const dayTotal=ts.reduce((s,t)=>s+(Number(t.amount)||0),0);
+    return `<div class="day-header"><span class="day-label">${key}</span><span class="day-total">−${fmt(dayTotal)}</span></div>`+ts.map(t=>txnTileHTML(t)).join('');
   }).join('');
 }
 
-// ══════════════════════════════════════════
-//  CHARTS
-// ══════════════════════════════════════════
 function setPeriod(days) {
-  currentPeriod = days;
-  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-  const btn = el('period-' + days);
-  if (btn) btn.classList.add('active');
+  currentPeriod=days;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  const btn=el('period-'+days); if(btn) btn.classList.add('active');
   renderCharts();
 }
 
 function renderCharts() {
-  const txns = loadTxns();
-  const now = new Date();
-  const periodStart = new Date(now.getTime() - currentPeriod * 86400000);
-  const periodTxns = txns.filter(t => new Date(t.date) >= periodStart);
-  const total = periodTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
-  const labels = {7:'Last 7 Days', 30:'This Month', 90:'Last 3 Months', 365:'This Year'};
-  setText('chart-month-label', labels[currentPeriod] || '');
-  setText('chart-total', fmt(total));
-  setText('chart-count', String(periodTxns.length));
+  const txns=loadTxns(), now=new Date();
+  const periodStart=new Date(now.getTime()-currentPeriod*86400000);
+  const periodTxns=txns.filter(t=>new Date(t.date)>=periodStart);
+  const total=periodTxns.reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const labels={7:'Last 7 Days',30:'This Month',90:'Last 3 Months',365:'This Year'};
+  setText('chart-month-label',labels[currentPeriod]||'');
+  setText('chart-total',fmt(total));
+  setText('chart-count',String(periodTxns.length));
 
-  // Bar chart data
-  const barLabels = [], barData = [];
-  if (currentPeriod === 30) {
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-    const weeks = [];
-    let day = 1;
-    while (day <= daysInMonth) { const to = Math.min(day+6, daysInMonth); weeks.push({from:day, to}); day = to+1; }
-    weeks.forEach(({from, to}) => {
-      const s = new Date(now.getFullYear(), now.getMonth(), from);
-      const e = new Date(now.getFullYear(), now.getMonth(), to+1);
+  const barLabels=[], barData=[];
+  if(currentPeriod===30) {
+    const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    const weeks=[]; let day=1;
+    while(day<=daysInMonth) { const to=Math.min(day+6,daysInMonth); weeks.push({from:day,to}); day=to+1; }
+    weeks.forEach(({from,to})=>{
+      const s=new Date(now.getFullYear(),now.getMonth(),from);
+      const e=new Date(now.getFullYear(),now.getMonth(),to+1);
       barLabels.push(`${from}-${to}`);
-      barData.push(txns.filter(t => { const d=new Date(t.date); return d>=s&&d<e; }).reduce((s,t)=>s+(Number(t.amount)||0),0));
+      barData.push(txns.filter(t=>{const d=new Date(t.date);return d>=s&&d<e;}).reduce((s,t)=>s+(Number(t.amount)||0),0));
     });
-  } else if (currentPeriod === 365) {
-    for (let i=11; i>=0; i--) {
-      const m = new Date(now.getFullYear(), now.getMonth()-i, 1);
-      const me = new Date(now.getFullYear(), now.getMonth()-i+1, 1);
+  } else if(currentPeriod===365) {
+    for(let i=11;i>=0;i--) {
+      const m=new Date(now.getFullYear(),now.getMonth()-i,1), me=new Date(now.getFullYear(),now.getMonth()-i+1,1);
       barLabels.push(m.toLocaleDateString('en-IN',{month:'short'}));
       barData.push(txns.filter(t=>{const d=new Date(t.date);return d>=m&&d<me;}).reduce((s,t)=>s+(Number(t.amount)||0),0));
     }
-  } else if (currentPeriod === 90) {
-    const weeks = Math.ceil(currentPeriod/7);
-    for (let i=weeks-1; i>=0; i--) {
-      const s = new Date(now.getTime()-(i+1)*7*86400000);
-      const e = new Date(now.getTime()-i*7*86400000);
+  } else if(currentPeriod===90) {
+    const weeks=Math.ceil(currentPeriod/7);
+    for(let i=weeks-1;i>=0;i--) {
+      const s=new Date(now.getTime()-(i+1)*7*86400000), e=new Date(now.getTime()-i*7*86400000);
       barLabels.push(s.toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
       barData.push(txns.filter(t=>{const d=new Date(t.date);return d>=s&&d<e;}).reduce((s,t)=>s+(Number(t.amount)||0),0));
     }
   } else {
-    for (let i=6; i>=0; i--) {
-      const day = new Date(now); day.setDate(now.getDate()-i);
-      const s = new Date(day.getFullYear(),day.getMonth(),day.getDate());
-      const e = new Date(s.getTime()+86400000);
+    for(let i=6;i>=0;i--) {
+      const day=new Date(now); day.setDate(now.getDate()-i);
+      const s=new Date(day.getFullYear(),day.getMonth(),day.getDate());
+      const e=new Date(s.getTime()+86400000);
       barLabels.push(day.toLocaleDateString('en-IN',{weekday:'short'}));
       barData.push(txns.filter(t=>{const d=new Date(t.date);return d>=s&&d<e;}).reduce((s,t)=>s+(Number(t.amount)||0),0));
     }
   }
 
-  const titleEl = el('bar-chart-title');
-  if (titleEl) titleEl.textContent = currentPeriod<=7?'Daily Spending':currentPeriod===30?'Weekly Spending':currentPeriod===90?'Weekly Spending':'Monthly Spending';
+  const titleEl=el('bar-chart-title');
+  if(titleEl) titleEl.textContent=currentPeriod<=7?'Daily Spending':currentPeriod===30?'Weekly Spending':currentPeriod===90?'Weekly Spending':'Monthly Spending';
 
-  // Restore pie canvas if needed
-  const pieSection = el('pie-section');
-  if (pieSection && !el('pie-chart')) {
-    pieSection.innerHTML = `<div class="card-title">By category</div><div style="height:200px;width:100%;position:relative;display:flex;justify-content:center;"><canvas id="pie-chart" style="display:block;"></canvas></div><div id="chart-legend" style="margin-top:16px;"></div>`;
-  }
-
-  if (barChartInstance) barChartInstance.destroy();
-  const barCanvas = el('bar-chart');
-  if (barCanvas) {
-    barChartInstance = new Chart(barCanvas, {
-      type:'bar',
-      data:{labels:barLabels, datasets:[{data:barData, backgroundColor:barData.map(v=>v>0?'#0F6E56':'#F1EFE8'), borderRadius:8, borderSkipped:false}]},
-      options:{responsive:true, maintainAspectRatio:false, animation:{duration:400}, plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}}, scales:{x:{grid:{display:false}, ticks:{font:{family:'Nunito',weight:'700',size:10}, color:'#888780', maxRotation:45}}, y:{display:false}}}
-    });
-    requestAnimationFrame(() => { if (barChartInstance) barChartInstance.resize(); });
+  const pieSection=el('pie-section');
+  if(pieSection&&!el('pie-chart')) {
+    pieSection.innerHTML=`<div class="card-title">By category</div><div style="height:200px;width:100%;position:relative;display:flex;justify-content:center;"><canvas id="pie-chart" style="display:block;"></canvas></div><div id="chart-legend" style="margin-top:16px;"></div>`;
   }
 
-  const catTotals = {};
-  periodTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
-  const sortedCats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
-  if (sortedCats.length === 0) {
-    if (pieSection) pieSection.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data for this period</div></div>`;
-    chartsRendered = true; return;
+  if(barChartInstance) barChartInstance.destroy();
+  const barCanvas=el('bar-chart');
+  if(barCanvas) {
+    barChartInstance=new Chart(barCanvas,{type:'bar',data:{labels:barLabels,datasets:[{data:barData,backgroundColor:barData.map(v=>v>0?'#0F6E56':'#F1EFE8'),borderRadius:8,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:400},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Nunito',weight:'700',size:10},color:'#888780',maxRotation:45}},y:{display:false}}}});
+    requestAnimationFrame(()=>{ if(barChartInstance) barChartInstance.resize(); });
   }
-  if (pieChartInstance) pieChartInstance.destroy();
-  const pieCanvas = el('pie-chart');
-  if (pieCanvas) {
-    pieChartInstance = new Chart(pieCanvas, {
-      type:'doughnut',
-      data:{labels:sortedCats.map(([k])=>k), datasets:[{data:sortedCats.map(([,v])=>v), backgroundColor:sortedCats.map(([k])=>getCatMeta(k).color), borderWidth:2, borderColor:'#fff'}]},
-      options:{responsive:true, maintainAspectRatio:false, cutout:'55%', animation:{duration:400}, plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)} (${Math.round(ctx.raw/total*100)}%)`}}}}
-    });
+
+  const catTotals={};
+  periodTxns.forEach(t=>{const k=t.category||'Other';catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0);});
+  const sortedCats=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  if(sortedCats.length===0) {
+    if(pieSection) pieSection.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data for this period</div></div>`;
+    return;
   }
-  setHTML('chart-legend', sortedCats.map(([cat,amt]) => {
-    const meta = getCatMeta(cat);
-    const pct = total>0?Math.round((amt/total)*100):0;
+  if(pieChartInstance) pieChartInstance.destroy();
+  const pieCanvas=el('pie-chart');
+  if(pieCanvas) {
+    pieChartInstance=new Chart(pieCanvas,{type:'doughnut',data:{labels:sortedCats.map(([k])=>k),datasets:[{data:sortedCats.map(([,v])=>v),backgroundColor:sortedCats.map(([k])=>getCatMeta(k).color),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',animation:{duration:400},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)} (${Math.round(ctx.raw/total*100)}%)`}}}}});
+  }
+  setHTML('chart-legend',sortedCats.map(([cat,amt])=>{
+    const meta=getCatMeta(cat), pct=total>0?Math.round((amt/total)*100):0;
     return `<div class="legend-row"><div class="legend-left"><div class="legend-dot" style="background:${meta.color}"></div><span style="font-size:15px">${meta.icon}</span><span class="legend-name">${cat}</span></div><div class="legend-right"><span class="legend-pct">${pct}%</span><span class="legend-amt">${fmt(amt)}</span></div></div>`;
   }).join(''));
-  chartsRendered = true;
 }
 
-// ══════════════════════════════════════════
-//  SETTINGS
-// ══════════════════════════════════════════
 function loadSettingsValues() {
-  const budget = loadBudget(); const daily = loadDailyLimit();
-  const budgetEl = el('inp-monthly-budget'); if (budgetEl && budget) budgetEl.value = budget;
-  const dailyEl = el('inp-daily-limit'); if (dailyEl && daily) dailyEl.value = daily;
+  const budget=loadBudget(), daily=loadDailyLimit();
+  const budgetEl=el('inp-monthly-budget'); if(budgetEl&&budget) budgetEl.value=budget;
+  const dailyEl=el('inp-daily-limit'); if(dailyEl&&daily) dailyEl.value=daily;
   updateNotifSummary(); updateBudgetSummary();
 }
 function updateNotifSummary() {}
 function updateBudgetSummary() {}
 
 function saveBudget() {
-  const val = parseFloat(el('inp-monthly-budget') ? el('inp-monthly-budget').value : 0);
-  if (!val || val <= 0) { showToast('Enter a valid budget'); return; }
-  localStorage.setItem(BUDGET_KEY, val);
-  showToast('Monthly budget set to ' + fmt(val) + ' 💰');
-  renderHome();
+  const val=parseFloat(el('inp-monthly-budget')?el('inp-monthly-budget').value:0);
+  if(!val||val<=0) { showToast('Enter a valid budget'); return; }
+  localStorage.setItem(BUDGET_KEY,val); showToast('Monthly budget set to '+fmt(val)+' 💰'); renderHome();
 }
 function saveDailyLimit() {
-  const val = parseFloat(el('inp-daily-limit') ? el('inp-daily-limit').value : 0);
-  if (!val || val <= 0) { showToast('Enter a valid daily limit'); return; }
-  localStorage.setItem(DAILY_KEY, val);
-  showToast('Daily limit set to ' + fmt(val) + ' 📅');
-  renderHome();
+  const val=parseFloat(el('inp-daily-limit')?el('inp-daily-limit').value:0);
+  if(!val||val<=0) { showToast('Enter a valid daily limit'); return; }
+  localStorage.setItem(DAILY_KEY,val); showToast('Daily limit set to '+fmt(val)+' 📅'); renderHome();
 }
-function openPrivacyPolicy() {
-  window.location.href = 'https://venkatakalyan2461-arch.github.io/Moneytrack/privacy_policy.html';
-}
-function openPrivacyPage() {
-  el('screen-settings').classList.remove('active');
-  el('screen-privacy').classList.add('active');
-}
-function closePrivacyPage() {
-  el('screen-privacy').classList.remove('active');
-  el('screen-settings').classList.add('active');
-}
+function openPrivacyPage() { el('screen-settings').classList.remove('active'); el('screen-privacy').classList.add('active'); }
+function closePrivacyPage() { el('screen-privacy').classList.remove('active'); el('screen-settings').classList.add('active'); }
 
 function exportCSV() {
-  const txns = loadTxns();
-  if (txns.length === 0) { showToast('No transactions to export'); return; }
-  const header = 'Date,Merchant,Category,Amount,Note';
-  const rows = txns.map(t => `${new Date(t.date).toLocaleDateString('en-IN')},${t.merchant},${t.category},${t.amount},${t.note||''}`);
-  const csv = [header, ...rows].join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'spendsmart_expenses.csv';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  const txns=loadTxns();
+  if(txns.length===0) { showToast('No transactions to export'); return; }
+  const header='Date,Merchant,Category,Amount,Note';
+  const rows=txns.map(t=>`${new Date(t.date).toLocaleDateString('en-IN')},${t.merchant},${t.category},${t.amount},${t.note||''}`);
+  const csv=[header,...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='spendsmart_expenses.csv'; a.style.display='none';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },1000);
   showToast('Downloaded! Check your Downloads folder 📂');
 }
 
-function fallbackCSV(csv) {}
 function clearAllData() {
-  if (!confirm('Delete ALL transactions? Cannot be undone.')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  showToast('All data cleared');
-  renderHome();
-  renderHistory('');
+  if(!confirm('Delete ALL transactions? Cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY); showToast('All data cleared');
+  renderHome(); renderHistory('');
 }
 function rateApp() {
-  const url = '';
-  if (url) window.open(url, '_blank');
-  else showToast('Coming soon on Play Store! 🚀');
+  const url=''; if(url) window.open(url,'_blank'); else showToast('Coming soon on Play Store! 🚀');
 }
 
-// ══════════════════════════════════════════
-//  PROFILE PAGE
-// ══════════════════════════════════════════
-function openProfilePage() {
-  el('screen-settings').classList.remove('active');
-  el('screen-profile').classList.add('active');
-  const nameEl = el('inp-profile-name');
-  if (nameEl) nameEl.value = loadUsername();
-}
-function closeProfilePage() {
-  el('screen-profile').classList.remove('active');
-  el('screen-settings').classList.add('active');
-}
+function openProfilePage() { el('screen-settings').classList.remove('active'); el('screen-profile').classList.add('active'); const nameEl=el('inp-profile-name'); if(nameEl) nameEl.value=loadUsername(); }
+function closeProfilePage() { el('screen-profile').classList.remove('active'); el('screen-settings').classList.add('active'); }
 function saveProfileName() {
-  const nameEl = el('inp-profile-name');
-  const name = nameEl ? nameEl.value.trim() : '';
-  if (!name) { showToast('Enter your name'); return; }
-  localStorage.setItem(NAME_KEY, name);
-  showToast('Name updated! 👋');
-  renderHome();
-  closeProfilePage();
+  const nameEl=el('inp-profile-name'), name=nameEl?nameEl.value.trim():'';
+  if(!name) { showToast('Enter your name'); return; }
+  localStorage.setItem(NAME_KEY,name); showToast('Name updated! 👋'); renderHome(); closeProfilePage();
 }
 
-// ══════════════════════════════════════════
-//  NOTIFICATIONS PAGE
-// ══════════════════════════════════════════
-function openNotifPage() {
-  el('screen-settings').classList.remove('active');
-  el('screen-notif').classList.add('active');
-  loadNotifToggles();
-}
-function closeNotifPage() {
-  el('screen-notif').classList.remove('active');
-  el('screen-settings').classList.add('active');
-}
+function openNotifPage() { el('screen-settings').classList.remove('active'); el('screen-notif').classList.add('active'); loadNotifToggles(); }
+function closeNotifPage() { el('screen-notif').classList.remove('active'); el('screen-settings').classList.add('active'); }
 function loadNotifToggles() {
   ['daily','weekly','budget','dailylimit'].forEach(type => {
-    const t = el('toggle-' + type);
-    if (t) t.classList.toggle('on', isNotifEnabled(type));
+    const t=el('toggle-'+type); if(t) t.classList.toggle('on',isNotifEnabled(type));
   });
 }
 async function toggleNotifType(type) {
-  const toggleEl = el('toggle-' + type);
-  const current = isNotifEnabled(type);
-  if (!current) {
-    // Check if notifications are supported
-    if (!('Notification' in window)) {
-      // WebView — just enable silently, notifications will work when app runs natively
-      setNotifEnabled(type, true);
-      if (toggleEl) toggleEl.classList.add('on');
-      const labels = {daily:'Daily reminder set! You\'ll be notified at 9PM 🌙', weekly:'Weekly summary every Sunday at 10AM 📊', budget:'Budget alerts enabled 💰', dailylimit:'Daily limit alerts enabled 📅'};
-      showToast(labels[type] || 'Enabled ✅');
-      return;
+  const toggleEl=el('toggle-'+type), current=isNotifEnabled(type);
+  if(!current) {
+    if(!('Notification' in window)) {
+      setNotifEnabled(type,true); if(toggleEl) toggleEl.classList.add('on');
+      const labels={daily:"Daily reminder set! You'll be notified at 9PM 🌙",weekly:'Weekly summary every Sunday at 10AM 📊',budget:'Budget alerts enabled 💰',dailylimit:'Daily limit alerts enabled 📅'};
+      showToast(labels[type]||'Enabled ✅'); return;
     }
-    if (Notification.permission === 'denied') {
-      showToast('Enable notifications in your browser settings');
-      return;
+    if(Notification.permission==='denied') { showToast('Enable notifications in your browser settings'); return; }
+    if(Notification.permission!=='granted') {
+      const result=await Notification.requestPermission();
+      if(result!=='granted') { showToast('Permission denied. Enable in settings.'); return; }
     }
-    if (Notification.permission !== 'granted') {
-      const result = await Notification.requestPermission();
-      if (result !== 'granted') {
-        showToast('Permission denied. Enable in settings.');
-        return;
-      }
-    }
-    setNotifEnabled(type, true);
-    if (toggleEl) toggleEl.classList.add('on');
-    const labels = {daily:'Daily reminder set! You\'ll be notified at 9PM 🌙', weekly:'Weekly summary every Sunday at 10AM 📊', budget:'Budget alerts enabled 💰', dailylimit:'Daily limit alerts enabled 📅'};
-    showToast(labels[type] || 'Enabled ✅');
-    try {
-      new Notification('SpendSmart 💰', {body:`Notifications enabled! You'll receive daily reminders at 9PM.`, icon:'icon-192.png'});
-    } catch(e) {}
+    setNotifEnabled(type,true); if(toggleEl) toggleEl.classList.add('on');
+    const labels={daily:"Daily reminder set! You'll be notified at 9PM 🌙",weekly:'Weekly summary every Sunday at 10AM 📊',budget:'Budget alerts enabled 💰',dailylimit:'Daily limit alerts enabled 📅'};
+    showToast(labels[type]||'Enabled ✅');
+    try { new Notification('SpendSmart 💰',{body:"Notifications enabled! You'll receive daily reminders at 9PM.",icon:'icon-192.png'}); } catch(e) {}
     scheduleNotifications();
   } else {
-    setNotifEnabled(type, false);
-    if (toggleEl) toggleEl.classList.remove('on');
-    showToast('Notification disabled');
+    setNotifEnabled(type,false); if(toggleEl) toggleEl.classList.remove('on'); showToast('Notification disabled');
   }
 }
 
-// ══════════════════════════════════════════
-//  BUDGET PAGE
-// ══════════════════════════════════════════
 function openBudgetPage() {
-  el('screen-settings').classList.remove('active');
-  el('screen-budget').classList.add('active');
-  const b = loadBudget(); const d = loadDailyLimit();
-  const bEl = el('inp-monthly-budget'); if (bEl && b) bEl.value = b;
-  const dEl = el('inp-daily-limit'); if (dEl && d) dEl.value = d;
+  el('screen-settings').classList.remove('active'); el('screen-budget').classList.add('active');
+  const b=loadBudget(), d=loadDailyLimit();
+  const bEl=el('inp-monthly-budget'); if(bEl&&b) bEl.value=b;
+  const dEl=el('inp-daily-limit'); if(dEl&&d) dEl.value=d;
 }
-function closeBudgetPage() {
-  el('screen-budget').classList.remove('active');
-  el('screen-settings').classList.add('active');
-}
+function closeBudgetPage() { el('screen-budget').classList.remove('active'); el('screen-settings').classList.add('active'); }
 
-// ══════════════════════════════════════════
-//  ONBOARDING
-// ══════════════════════════════════════════
 function checkOnboarding() {
-  const name = loadUsername();
-  const overlay = el('onboard');
-  if (!overlay) return;
-  if (name) {
-    overlay.style.display = 'none';
-  } else {
-    overlay.style.display = 'flex';
-    setTimeout(() => { const n = el('onboard-name'); if (n) n.focus(); }, 400);
-  }
+  const name=loadUsername(), overlay=el('onboard'); if(!overlay) return;
+  if(name) { overlay.style.display='none'; }
+  else { overlay.style.display='flex'; setTimeout(()=>{ const n=el('onboard-name'); if(n) n.focus(); },400); }
 }
 function completeOnboard() {
-  const nameEl = el('onboard-name');
-  const name = nameEl ? nameEl.value.trim() : '';
-  if (!name) {
-    if (nameEl) { nameEl.style.borderColor = '#E8574A'; nameEl.placeholder = 'Please enter your name!'; }
-    return;
-  }
-  localStorage.setItem(NAME_KEY, name);
-  const overlay = el('onboard');
-  if (overlay) { overlay.classList.add('hide'); setTimeout(() => { overlay.style.display='none'; renderHome(); setTimeout(showGuide, 500); }, 400); }
+  const nameEl=el('onboard-name'), name=nameEl?nameEl.value.trim():'';
+  if(!name) { if(nameEl) { nameEl.style.borderColor='#E8574A'; nameEl.placeholder='Please enter your name!'; } return; }
+  localStorage.setItem(NAME_KEY,name);
+  const overlay=el('onboard');
+  if(overlay) { overlay.classList.add('hide'); setTimeout(()=>{ overlay.style.display='none'; renderHome(); setTimeout(showGuide,500); },400); }
 }
 
-// ══════════════════════════════════════════
-//  NOTIFICATIONS SCHEDULER
-// ══════════════════════════════════════════
 function scheduleNotifications() {
-  const now = new Date();
-  if (isNotifEnabled('daily')) {
-    const ninepm = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0, 0);
-    let ms = ninepm - now;
-    if (ms < 0) ms += 86400000;
-    setTimeout(() => {
-      const txns = loadTxns();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const todayTxns = txns.filter(t => new Date(t.date) >= todayStart);
-      const name = loadUsername();
-      if (todayTxns.length === 0) {
-        new Notification(`Hey ${name||'there'}! 👋`, {body:"Don't forget to log today's expenses!", icon:'icon-192.png'});
-      } else {
-        const total = todayTxns.reduce((s,t)=>s+t.amount,0);
-        new Notification(`Good evening ${name||''}! 🌙`, {body:`Logged ${todayTxns.length} transactions (${fmt(total)}) today. Keep it up!`, icon:'icon-192.png'});
-      }
-      setTimeout(scheduleNotifications, 86400000);
-    }, ms);
+  const now=new Date();
+  if(isNotifEnabled('daily')) {
+    const ninepm=new Date(now.getFullYear(),now.getMonth(),now.getDate(),21,0,0);
+    let ms=ninepm-now; if(ms<0) ms+=86400000;
+    setTimeout(()=>{
+      const txns=loadTxns(), todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+      const todayTxns=txns.filter(t=>new Date(t.date)>=todayStart);
+      const name=loadUsername();
+      if(todayTxns.length===0) { new Notification(`Hey ${name||'there'}! 👋`,{body:"Don't forget to log today's expenses!",icon:'icon-192.png'}); }
+      else { const total=todayTxns.reduce((s,t)=>s+t.amount,0); new Notification(`Good evening ${name||''}! 🌙`,{body:`Logged ${todayTxns.length} transactions (${fmt(total)}) today. Keep it up!`,icon:'icon-192.png'}); }
+      setTimeout(scheduleNotifications,86400000);
+    },ms);
   }
-  if (isNotifEnabled('weekly') && now.getDay() === 0) {
-    const tenAM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0);
-    let ms = tenAM - now; if (ms < 0) ms = 1000;
-    setTimeout(() => {
-      const txns = loadTxns();
-      const weekStart = new Date(now.getTime() - 7*86400000);
-      const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
-      const weekTotal = weekTxns.reduce((s,t)=>s+t.amount,0);
-      if (weekTxns.length > 0) {
-        const catTotals = {};
-        weekTxns.forEach(t => { catTotals[t.category]=(catTotals[t.category]||0)+t.amount; });
-        const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
-        const topMeta = getCatMeta(topCat[0]);
-        new Notification('📊 Weekly Summary', {body:`Spent ${fmt(weekTotal)} this week. Top: ${topMeta.icon} ${topCat[0]} ${fmt(topCat[1])}.`, icon:'icon-192.png'});
+  if(isNotifEnabled('weekly')&&now.getDay()===0) {
+    const tenAM=new Date(now.getFullYear(),now.getMonth(),now.getDate(),10,0,0);
+    let ms=tenAM-now; if(ms<0) ms=1000;
+    setTimeout(()=>{
+      const txns=loadTxns(), weekStart=new Date(now.getTime()-7*86400000);
+      const weekTxns=txns.filter(t=>new Date(t.date)>=weekStart);
+      const weekTotal=weekTxns.reduce((s,t)=>s+t.amount,0);
+      if(weekTxns.length>0) {
+        const catTotals={};
+        weekTxns.forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+t.amount;});
+        const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+        const topMeta=getCatMeta(topCat[0]);
+        new Notification('📊 Weekly Summary',{body:`Spent ${fmt(weekTotal)} this week. Top: ${topMeta.icon} ${topCat[0]} ${fmt(topCat[1])}.`,icon:'icon-192.png'});
       }
-    }, ms);
+    },ms);
   }
 }
 
-// ══════════════════════════════════════════
-//  ANDROID BACK BUTTON
-// ══════════════════════════════════════════
 window.addEventListener('popstate', function() {
-  const subs = ['screen-notif','screen-budget','screen-profile','screen-privacy','screen-add'];
-  const open = subs.find(s => { const e=el(s); return e && e.classList.contains('active'); });
-  if (open === 'screen-notif') { closeNotifPage(); history.pushState(null,'',window.location.href); }
-  else if (open === 'screen-budget') { closeBudgetPage(); history.pushState(null,'',window.location.href); }
-  else if (open === 'screen-profile') { closeProfilePage(); history.pushState(null,'',window.location.href); }
-  else if (open === 'screen-privacy') { closePrivacyPage(); history.pushState(null,'',window.location.href); }
-  else if (open === 'screen-add') { closeAddExpense(); history.pushState(null,'',window.location.href); }
+  const subs=['screen-notif','screen-budget','screen-profile','screen-privacy','screen-add'];
+  const open=subs.find(s=>{const e=el(s);return e&&e.classList.contains('active');});
+  if(open==='screen-notif') { closeNotifPage(); history.pushState(null,'',window.location.href); }
+  else if(open==='screen-budget') { closeBudgetPage(); history.pushState(null,'',window.location.href); }
+  else if(open==='screen-profile') { closeProfilePage(); history.pushState(null,'',window.location.href); }
+  else if(open==='screen-privacy') { closePrivacyPage(); history.pushState(null,'',window.location.href); }
+  else if(open==='screen-add') { closeAddExpense(); history.pushState(null,'',window.location.href); }
 });
-history.pushState(null, '', window.location.href);
+history.pushState(null,'',window.location.href);
 
-// ══════════════════════════════════════════
-//  FIRST TIME GUIDE
-// ══════════════════════════════════════════
-const GUIDE_KEY = 'spendsmart_guide_done';
-const GUIDE_STEPS = [
-  { emoji:'➕', title:'Add Your Expenses', desc:'Tap the "+ Add Expense" button at the bottom of the home screen to log any expense manually.' },
-  { emoji:'🍔', title:'Auto Category Detection', desc:'Just type the merchant name like "Zomato" or "Rapido" — the category is automatically selected for you!' },
-  { emoji:'📊', title:'Track Your Spending', desc:'View beautiful charts and insights on the Charts tab. See where your money goes each week and month.' },
-  { emoji:'🔔', title:'Enable Reminders', desc:'Go to Settings → Notifications to enable daily reminders at 9PM and weekly spending summaries every Sunday!' },
-  { emoji:'💰', title:'Set a Budget', desc:'Go to Settings → Budget & Limits to set a monthly budget. Get alerted when you\'re close to the limit!' },
-  { emoji:'🎉', title:'You\'re All Set!', desc:'Start adding your daily expenses and take control of your spending. Happy tracking!' },
+const GUIDE_KEY='spendsmart_guide_done';
+const GUIDE_STEPS=[
+  {emoji:'➕',title:'Add Your Expenses',desc:'Tap the "+ Add Expense" button at the bottom of the home screen to log any expense manually.'},
+  {emoji:'🍔',title:'Auto Category Detection',desc:'Just type the merchant name like "Zomato" or "Rapido" — the category is automatically selected for you!'},
+  {emoji:'📊',title:'Track Your Spending',desc:'View beautiful charts and insights on the Charts tab. See where your money goes each week and month.'},
+  {emoji:'🔔',title:'Enable Reminders',desc:'Go to Settings → Notifications to enable daily reminders at 9PM and weekly spending summaries every Sunday!'},
+  {emoji:'💰',title:'Set a Budget',desc:"Go to Settings → Budget & Limits to set a monthly budget. Get alerted when you're close to the limit!"},
+  {emoji:'🎉',title:"You're All Set!",desc:'Start adding your daily expenses and take control of your spending. Happy tracking!'},
 ];
-let guideStep = 0;
+let guideStep=0;
 
 function showGuide() {
-  if (localStorage.getItem(GUIDE_KEY)) return;
-  guideStep = 0;
-  updateGuide();
-  const overlay = el('guide-overlay');
-  if (overlay) overlay.style.display = 'flex';
+  if(localStorage.getItem(GUIDE_KEY)) return;
+  guideStep=0; updateGuide();
+  const overlay=el('guide-overlay'); if(overlay) overlay.style.display='flex';
 }
-
 function updateGuide() {
-  const step = GUIDE_STEPS[guideStep];
-  setText('guide-emoji', step.emoji);
-  setText('guide-title', step.title);
-  setText('guide-desc', step.desc);
-  setText('guide-btn', guideStep === GUIDE_STEPS.length - 1 ? 'Get Started! 🚀' : 'Next →');
-  // Dots
-  const dotsEl = el('guide-dots');
-  if (dotsEl) {
-    dotsEl.innerHTML = GUIDE_STEPS.map((_, i) =>
-      `<div class="guide-dot ${i === guideStep ? 'active' : ''}"></div>`
-    ).join('');
-  }
+  const step=GUIDE_STEPS[guideStep];
+  setText('guide-emoji',step.emoji); setText('guide-title',step.title); setText('guide-desc',step.desc);
+  setText('guide-btn',guideStep===GUIDE_STEPS.length-1?'Get Started! 🚀':'Next →');
+  const dotsEl=el('guide-dots');
+  if(dotsEl) dotsEl.innerHTML=GUIDE_STEPS.map((_,i)=>`<div class="guide-dot ${i===guideStep?'active':''}"></div>`).join('');
 }
+function nextGuide() { if(guideStep<GUIDE_STEPS.length-1) { guideStep++; updateGuide(); } else { skipGuide(); } }
+function skipGuide() { localStorage.setItem(GUIDE_KEY,'1'); const overlay=el('guide-overlay'); if(overlay) overlay.style.display='none'; }
 
-function nextGuide() {
-  if (guideStep < GUIDE_STEPS.length - 1) {
-    guideStep++;
-    updateGuide();
-  } else {
-    skipGuide();
-  }
-}
-
-function skipGuide() {
-  localStorage.setItem(GUIDE_KEY, '1');
-  const overlay = el('guide-overlay');
-  if (overlay) overlay.style.display = 'none';
-}
-
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
+// INIT
 seedIfEmpty();
 renderHome();
 checkOnboarding();
-if (anyNotifEnabled() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-  scheduleNotifications();
-}
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/Moneytrack/sw.js', {scope: '/Moneytrack/'})
-      .then(() => console.log('SW registered'))
-      .catch(e => console.log('SW:', e));
+if(anyNotifEnabled()&&typeof Notification!=='undefined'&&Notification.permission==='granted') { scheduleNotifications(); }
+if('serviceWorker' in navigator) {
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/Moneytrack/sw.js',{scope:'/Moneytrack/'})
+      .then(()=>console.log('SW registered'))
+      .catch(e=>console.log('SW:',e));
   });
 }
 </script>
