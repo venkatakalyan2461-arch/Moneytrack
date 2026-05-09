@@ -20,45 +20,62 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-<!-- OneSignal -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<!-- OneSignal Tags via GoNative JS Bridge -->
 <script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "68d516a4-31d7-49a0-8846-1a6dbc08f2d2",
-      notifyButton: { enable: false },
-      allowLocalhostAsSecureOrigin: true,
-    });
-    // Send user data as tags for personalized notifications
-    setTimeout(() => {
-      try {
-        const txns = JSON.parse(localStorage.getItem('spendsmart_txns') || '[]');
-        const now = new Date();
-        const name = localStorage.getItem('spendsmart_name') || '';
-        const weekStart = new Date(now.getTime() - 7 * 86400000);
-        const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
-        const weekTotal = weekTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
-        const monthTxns = txns.filter(t => {
-          const d = new Date(t.date);
-          return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
-        });
-        const monthTotal = monthTxns.reduce((s,t) => s+(Number(t.amount)||0), 0);
-        const catTotals = {};
-        weekTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
-        const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
-        OneSignal.User.addTags({
-          user_name: name,
-          week_total: String(Math.round(weekTotal)),
-          month_total: String(Math.round(monthTotal)),
-          top_category: topCat ? topCat[0] : 'None',
-          top_category_amount: topCat ? String(Math.round(topCat[1])) : '0',
-          transaction_count: String(weekTxns.length),
-          last_active: now.toLocaleDateString('en-IN'),
-        });
-        console.log('OneSignal tags updated');
-      } catch(e) { console.log('OneSignal tag error:', e); }
-    }, 3000);
+  // Send user data tags to OneSignal via GoNative bridge
+  function sendOneSignalTags() {
+    try {
+      const name = localStorage.getItem('spendsmart_name') || '';
+      const txns = JSON.parse(localStorage.getItem('spendsmart_txns') || '[]');
+      const now = new Date();
+      const weekStart = new Date(now.getTime() - 7 * 86400000);
+      const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
+      const weekTotal = Math.round(weekTxns.reduce((s,t) => s+(Number(t.amount)||0), 0));
+      const monthTxns = txns.filter(t => {
+        const d = new Date(t.date);
+        return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+      });
+      const monthTotal = Math.round(monthTxns.reduce((s,t) => s+(Number(t.amount)||0), 0));
+      const catTotals = {};
+      weekTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
+      const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+
+      const tags = {
+        user_name: name,
+        week_total: String(weekTotal),
+        month_total: String(monthTotal),
+        top_category: topCat ? topCat[0] : 'None',
+        top_category_amount: topCat ? String(Math.round(topCat[1])) : '0',
+        transaction_count: String(weekTxns.length),
+        last_active: now.toLocaleDateString('en-IN'),
+      };
+
+      // GoNative/Median OneSignal JS Bridge
+      if (window.median && window.median.onesignal) {
+        window.median.onesignal.sendTags({ tags: tags });
+        console.log('Tags sent via GoNative bridge:', tags);
+      }
+      // Also try legacy gonative bridge
+      else if (window.gonative && window.gonative.onesignal) {
+        window.gonative.onesignal.sendTags({ tags: tags });
+        console.log('Tags sent via legacy bridge:', tags);
+      }
+      // Fallback — try OneSignal web SDK
+      else if (window.OneSignal) {
+        window.OneSignal.sendTags(tags);
+        console.log('Tags sent via web SDK:', tags);
+      }
+      else {
+        console.log('No OneSignal bridge found, tags:', tags);
+      }
+    } catch(e) {
+      console.log('OneSignal tag error:', e);
+    }
+  }
+
+  // Send tags when app loads (after 2 seconds)
+  window.addEventListener('load', function() {
+    setTimeout(sendOneSignalTags, 2000);
   });
 </script>
 
@@ -1036,25 +1053,7 @@ function saveExpense() {
 }
 
 function updateOneSignalTags() {
-  try {
-    if (window.OneSignal && window.OneSignal.User) {
-      const txns = loadTxns(), now = new Date();
-      const weekStart = new Date(now.getTime() - 7*86400000);
-      const weekTxns = txns.filter(t => new Date(t.date) >= weekStart);
-      const weekTotal = weekTxns.reduce((s,t)=>s+(Number(t.amount)||0),0);
-      const catTotals = {};
-      weekTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
-      const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
-      window.OneSignal.User.addTags({
-        user_name: loadUsername(),
-        week_total: String(Math.round(weekTotal)),
-        transaction_count: String(weekTxns.length),
-        top_category: topCat ? topCat[0] : 'None',
-        top_category_amount: topCat ? String(Math.round(topCat[1])) : '0',
-        last_active: now.toLocaleDateString('en-IN'),
-      });
-    }
-  } catch(e) {}
+  setTimeout(sendOneSignalTags, 500);
 }
 
 let pullStartY=0, isPulling=false;
