@@ -20,9 +20,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-<!-- OneSignal Tags via GoNative JS Bridge -->
+<!-- OneSignal Tags via GoNative/Median JS Bridge -->
 <script>
-  // Send user data tags to OneSignal via GoNative bridge
   function sendOneSignalTags() {
     try {
       const name = localStorage.getItem('spendsmart_name') || '';
@@ -40,40 +39,35 @@
       weekTxns.forEach(t => { const k=t.category||'Other'; catTotals[k]=(catTotals[k]||0)+(Number(t.amount)||0); });
       const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
 
-      const tags = {
-        user_name: name,
-        week_total: String(weekTotal),
-        month_total: String(monthTotal),
-        top_category: topCat ? topCat[0] : 'None',
-        top_category_amount: topCat ? String(Math.round(topCat[1])) : '0',
-        transaction_count: String(weekTxns.length),
-        last_active: now.toLocaleDateString('en-IN'),
+      const onesignalTags = {
+        tags: {
+          user_name: name,
+          week_total: String(weekTotal),
+          month_total: String(monthTotal),
+          top_category: topCat ? topCat[0] : 'None',
+          top_category_amount: topCat ? String(Math.round(topCat[1])) : '0',
+          transaction_count: String(weekTxns.length),
+          last_active: now.toLocaleDateString('en-IN'),
+        }
       };
 
-      // GoNative/Median OneSignal JS Bridge
-      if (window.median && window.median.onesignal) {
-        window.median.onesignal.sendTags({ tags: tags });
-        console.log('Tags sent via GoNative bridge:', tags);
-      }
-      // Also try legacy gonative bridge
-      else if (window.gonative && window.gonative.onesignal) {
-        window.gonative.onesignal.sendTags({ tags: tags });
-        console.log('Tags sent via legacy bridge:', tags);
-      }
-      // Fallback — try OneSignal web SDK
-      else if (window.OneSignal) {
-        window.OneSignal.sendTags(tags);
-        console.log('Tags sent via web SDK:', tags);
-      }
-      else {
-        console.log('No OneSignal bridge found, tags:', tags);
+      // Correct Median/GoNative JS Bridge syntax
+      if (window.median && window.median.onesignal && window.median.onesignal.tags) {
+        window.median.onesignal.tags.setTags(onesignalTags);
+        console.log('Tags sent via median bridge');
+      } else if (window.gonative && window.gonative.onesignal && window.gonative.onesignal.tags) {
+        window.gonative.onesignal.tags.setTags(onesignalTags);
+        console.log('Tags sent via gonative bridge');
+      } else {
+        // URL scheme fallback
+        window.location.href = 'gonative://onesignal/tags/set?tags=' + encodeURIComponent(JSON.stringify(onesignalTags.tags));
+        console.log('Tags sent via URL scheme');
       }
     } catch(e) {
       console.log('OneSignal tag error:', e);
     }
   }
 
-  // Send tags when app loads (after 2 seconds)
   window.addEventListener('load', function() {
     setTimeout(sendOneSignalTags, 2000);
   });
