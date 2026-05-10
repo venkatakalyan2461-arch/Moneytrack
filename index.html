@@ -449,7 +449,7 @@
         <div class="form-label">DATE</div>
         <div class="date-row">
           <span class="date-label-left">📅 Date</span>
-          <input type="date" id="inp-date">
+          <input type="date" id="inp-date" max="">
         </div>
       </div>
       <div class="form-section">
@@ -971,10 +971,11 @@ let editingId = null, selectedCategory = 'Food & Dining';
 
 function openAddExpense() {
   editingId = null; selectedCategory = 'Food & Dining';
+  const today = new Date().toISOString().split('T')[0];
   const amtEl=el('inp-amount'); if(amtEl) amtEl.value='';
   const merEl=el('inp-merchant'); if(merEl) merEl.value='';
   const noteEl=el('inp-note'); if(noteEl) noteEl.value='';
-  const dateEl=el('inp-date'); if(dateEl) dateEl.value=new Date().toISOString().split('T')[0];
+  const dateEl=el('inp-date'); if(dateEl) { dateEl.value=today; dateEl.max=today; }
   setText('add-title','Add Expense'); setText('save-btn','Save Expense');
   renderCatChips();
   document.querySelector('.screen.active').classList.remove('active');
@@ -982,10 +983,11 @@ function openAddExpense() {
 }
 function openEditExpense(t) {
   editingId=t.id; selectedCategory=t.category||'Food & Dining';
+  const today = new Date().toISOString().split('T')[0];
   const amtEl=el('inp-amount'); if(amtEl) amtEl.value=t.amount;
   const merEl=el('inp-merchant'); if(merEl) merEl.value=t.merchant||'';
   const noteEl=el('inp-note'); if(noteEl) noteEl.value=t.note||'';
-  const dateEl=el('inp-date'); if(dateEl) dateEl.value=new Date(t.date).toISOString().split('T')[0];
+  const dateEl=el('inp-date'); if(dateEl) { dateEl.value=new Date(t.date).toISOString().split('T')[0]; dateEl.max=today; }
   setText('add-title','Edit Expense'); setText('save-btn','Update Expense');
   renderCatChips();
   document.querySelector('.screen.active').classList.remove('active');
@@ -1006,7 +1008,8 @@ function selectCat(name) { selectedCategory=name; renderCatChips(); }
 function autocat() {
   const v=el('inp-merchant')?el('inp-merchant').value:'';
   const cat=getCategoryForMerchant(v);
-  if(cat!=='Other') { selectedCategory=cat; renderCatChips(); }
+  selectedCategory=cat;
+  renderCatChips();
 }
 function saveExpense() {
   const amtEl=el('inp-amount'), merEl=el('inp-merchant'), noteEl=el('inp-note'), dateEl=el('inp-date');
@@ -1333,7 +1336,6 @@ const GUIDE_STEPS=[
   {emoji:'➕',title:'Add Your Expenses',desc:'Tap the "+ Add Expense" button at the bottom of the home screen to log any expense manually.'},
   {emoji:'🍔',title:'Auto Category Detection',desc:'Just type the merchant name like "Zomato" or "Rapido" — the category is automatically selected for you!'},
   {emoji:'📊',title:'Track Your Spending',desc:'View beautiful charts and insights on the Charts tab. See where your money goes each week and month.'},
-  {emoji:'🔔',title:'Enable Reminders',desc:'Go to Settings → Notifications to enable daily reminders at 9PM and weekly spending summaries every Sunday!'},
   {emoji:'💰',title:'Set a Budget',desc:"Go to Settings → Budget & Limits to set a monthly budget. Get alerted when you're close to the limit!"},
   {emoji:'🎉',title:"You're All Set!",desc:'Start adding your daily expenses and take control of your spending. Happy tracking!'},
 ];
