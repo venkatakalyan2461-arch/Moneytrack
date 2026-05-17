@@ -124,7 +124,7 @@
   .scroll-body {
     flex: 1; overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 80px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
   .scroll-body::-webkit-scrollbar { display: none; }
 
@@ -166,7 +166,7 @@
   .bottom-nav {
     display: flex; background: white;
     border-top: 1px solid var(--border);
-    padding: 8px 4px 12px; flex-shrink: 0;
+    padding: 8px 4px calc(12px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0;
   }
   .nav-item {
     flex: 1; display: flex; flex-direction: column;
@@ -215,7 +215,9 @@
   .section-link { font-size: 12px; color: var(--primary); font-weight: 700; cursor: pointer; border: none; background: none; font-family: 'Nunito', sans-serif; }
 
   .fab {
-    position: fixed; bottom: 80px; right: calc(50% - 210px + 16px);
+    position: fixed; 
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    right: calc(50% - 210px + 16px);
     background: var(--primary); color: white; border: none; cursor: pointer;
     border-radius: 28px; padding: 14px 22px;
     font-size: 14px; font-weight: 800; font-family: 'Nunito', sans-serif;
@@ -453,7 +455,7 @@
         </div>
       </div>
       <div class="form-section">
-        <div class="form-label">NOTE (OPTIONAL)</div>
+        <div class="form-label">Note (optional)</div>
         <input class="text-input" type="text" id="inp-note" placeholder="Add a note...">
       </div>
       <div style="margin: 0 16px;">
@@ -575,41 +577,6 @@
         <div class="settings-row">
           <div class="settings-icon">ℹ️</div>
           <div class="settings-info"><div class="settings-label">SpendSmart</div><div class="settings-sub">Version 1.0.0</div></div>
-        </div>
-      </div>
-      <div class="privacy-banner">
-        <span class="privacy-icon">🔒</span>
-        <div class="privacy-text">Your financial data is stored only on your device. We use OneSignal only for sending daily reminders. No financial data is ever shared.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- NOTIFICATIONS SCREEN -->
-  <div class="screen" id="screen-notif">
-    <div class="appbar" style="padding-bottom:12px;">
-      <button class="appbar-back" onclick="closeNotifPage()">←</button>
-      <span class="appbar-title">Notifications</span>
-    </div>
-    <div class="scroll-body">
-      <div class="settings-section-title">Reminders</div>
-      <div class="settings-card">
-        <div class="settings-row">
-          <div class="settings-icon">🌙</div>
-          <div class="settings-info"><div class="settings-label">Daily Reminder</div><div class="settings-sub">Get reminded to log expenses every day</div></div>
-          <button class="toggle" id="toggle-daily" onclick="toggleNotifType('daily')"></button>
-        </div>
-      </div>
-      <div class="settings-section-title">Budget Alerts</div>
-      <div class="settings-card">
-        <div class="settings-row">
-          <div class="settings-icon">💰</div>
-          <div class="settings-info"><div class="settings-label">Monthly Budget Alert</div><div class="settings-sub">Alert when monthly budget is 80% used</div></div>
-          <button class="toggle" id="toggle-budget" onclick="toggleNotifType('budget')"></button>
-        </div>
-        <div class="settings-row">
-          <div class="settings-icon">📅</div>
-          <div class="settings-info"><div class="settings-label">Daily Limit Alert</div><div class="settings-sub">Alert when daily spending limit exceeded</div></div>
-          <button class="toggle" id="toggle-dailylimit" onclick="toggleNotifType('dailylimit')"></button>
         </div>
       </div>
     </div>
@@ -737,7 +704,7 @@
       <div class="guide-title" id="guide-title"></div>
       <div class="guide-desc" id="guide-desc"></div>
       <button class="guide-btn" id="guide-btn" onclick="nextGuide()">Next →</button>
-      <button class="guide-skip" onclick="skipGuide()">Skip</button>
+      <button class="guide-skip" id="guide-skip" onclick="skipGuide()">Skip</button>
     </div>
   </div>
 
@@ -867,7 +834,7 @@ function renderHome() {
   setText('home-total', fmt(monthTotal));
   setText('home-today', fmt(todayTotal));
   setText('home-count', String(monthTxns.length));
-  setText('home-month', now.toLocaleDateString('en-IN',{month:'long',year:'numeric'}) + ' • ' + monthTxns.length + ' transactions');
+  setText('home-month', now.toLocaleDateString('en-IN',{month:'long',year:'numeric'}) + ' • ' + monthTxns.length + (monthTxns.length === 1 ? ' transaction' : ' transactions'));
 
   const budget = loadBudget(), bannerEl = el('budget-banner');
   if (bannerEl) {
@@ -917,7 +884,7 @@ function txnTileHTML(t) {
   return `<div class="txn-tile" id="txn-${t.id}" onclick="openActionSheet(${t.id})">
     <div class="txn-icon" style="background:${meta.color}22">${meta.icon}</div>
     <div class="txn-info"><div class="txn-merchant">${t.merchant||''}</div><div class="txn-meta">${t.category||'Other'} • ${fmtDate(t.date)}</div></div>
-    <div class="txn-right"><div class="txn-amount">−${fmt(t.amount)}</div><div class="upi-badge">${t.source==='sample'?'SAMPLE':'UPI'}</div></div>
+    <div class="txn-right"><div class="txn-amount">−${fmt(t.amount)}</div></div>
   </div>`;
 }
 
@@ -1014,7 +981,7 @@ function autocat() {
 function saveExpense() {
   const amtEl=el('inp-amount'), merEl=el('inp-merchant'), noteEl=el('inp-note'), dateEl=el('inp-date');
   const amount=amtEl?parseFloat(amtEl.value):0;
-  const merchant=merEl?merEl.value.trim():'';
+  const merchant=merEl?merEl.value.trim().replace(/\b\w/g, c => c.toUpperCase()):'';
   const note=noteEl?noteEl.value.trim():'';
   const dateStr=dateEl?dateEl.value:'';
   if(!amount||amount<=0) { showToast('Enter a valid amount'); return; }
@@ -1200,6 +1167,8 @@ function exportCSV() {
 }
 
 function clearAllData() {
+  const txns = loadTxns();
+  if (txns.length === 0) { showToast('No transactions to delete'); return; }
   if(!confirm('Delete ALL transactions? Cannot be undone.')) return;
   localStorage.removeItem(STORAGE_KEY); showToast('All data cleared');
   renderHome(); renderHistory('');
@@ -1321,10 +1290,9 @@ function scheduleNotifications() {
 }
 
 window.addEventListener('popstate', function() {
-  const subs=['screen-notif','screen-budget','screen-profile','screen-privacy','screen-add'];
+  const subs=['screen-budget','screen-profile','screen-privacy','screen-add'];
   const open=subs.find(s=>{const e=el(s);return e&&e.classList.contains('active');});
-  if(open==='screen-notif') { closeNotifPage(); history.pushState(null,'',window.location.href); }
-  else if(open==='screen-budget') { closeBudgetPage(); history.pushState(null,'',window.location.href); }
+  if(open==='screen-budget') { closeBudgetPage(); history.pushState(null,'',window.location.href); }
   else if(open==='screen-profile') { closeProfilePage(); history.pushState(null,'',window.location.href); }
   else if(open==='screen-privacy') { closePrivacyPage(); history.pushState(null,'',window.location.href); }
   else if(open==='screen-add') { closeAddExpense(); history.pushState(null,'',window.location.href); }
@@ -1337,7 +1305,7 @@ const GUIDE_STEPS=[
   {emoji:'🍔',title:'Auto Category Detection',desc:'Just type the merchant name like "Zomato" or "Rapido" — the category is automatically selected for you!'},
   {emoji:'📊',title:'Track Your Spending',desc:'View beautiful charts and insights on the Charts tab. See where your money goes each week and month.'},
   {emoji:'💰',title:'Set a Budget',desc:"Go to Settings → Budget & Limits to set a monthly budget. Get alerted when you're close to the limit!"},
-  {emoji:'🎉',title:"You're All Set!",desc:'Start adding your daily expenses and take control of your spending. Happy tracking!'},
+  {emoji:'🎉',title:"You're All Set!",desc:'Start adding your daily expenses and take control of your spending. Happy SmartSpending!'},
 ];
 let guideStep=0;
 
@@ -1350,6 +1318,9 @@ function updateGuide() {
   const step=GUIDE_STEPS[guideStep];
   setText('guide-emoji',step.emoji); setText('guide-title',step.title); setText('guide-desc',step.desc);
   setText('guide-btn',guideStep===GUIDE_STEPS.length-1?'Get Started! 🚀':'Next →');
+  // Hide skip on last step
+  const skipBtn = el('guide-skip');
+  if (skipBtn) skipBtn.style.display = guideStep===GUIDE_STEPS.length-1 ? 'none' : 'block';
   const dotsEl=el('guide-dots');
   if(dotsEl) dotsEl.innerHTML=GUIDE_STEPS.map((_,i)=>`<div class="guide-dot ${i===guideStep?'active':''}"></div>`).join('');
 }
